@@ -28,14 +28,21 @@ class AccuracyMetric(Metric):
     def add(self, outputs: Dict, inputs: Dict):
         label_name = OutputKeys.LABEL if OutputKeys.LABEL in inputs else OutputKeys.LABELS
         ground_truths = inputs[label_name]
-        eval_results = None
-        for key in [
-                OutputKeys.CAPTION, OutputKeys.TEXT, OutputKeys.BOXES,
-                OutputKeys.LABEL, OutputKeys.LABELS, OutputKeys.SCORES
-        ]:
-            if key in outputs and outputs[key] is not None:
-                eval_results = outputs[key]
-                break
+        eval_results = next(
+            (
+                outputs[key]
+                for key in [
+                    OutputKeys.CAPTION,
+                    OutputKeys.TEXT,
+                    OutputKeys.BOXES,
+                    OutputKeys.LABEL,
+                    OutputKeys.LABELS,
+                    OutputKeys.SCORES,
+                ]
+                if key in outputs and outputs[key] is not None
+            ),
+            None,
+        )
         assert type(ground_truths) == type(eval_results)
         ground_truths = torch_nested_numpify(ground_truths)
         for truth in ground_truths:

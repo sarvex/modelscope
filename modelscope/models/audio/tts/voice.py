@@ -40,32 +40,22 @@ def denorm_f0(mel,
         f0_mvn = f0_feature
 
         f0 = mel[:, -2]
-        uv = mel[:, -1]
-
-        uv[uv < uv_threshold] = 0.0
-        uv[uv >= uv_threshold] = 1.0
-
         f0 = f0 * f0_mvn[1:, :] + f0_mvn[0:1, :]
-        f0[f0 < f0_threshold] = f0_threshold
-
-        mel[:, -2] = f0
-        mel[:, -1] = uv
     else:  # global
         f0_global_max_min = f0_feature
 
         f0 = mel[:, -2]
-        uv = mel[:, -1]
-
-        uv[uv < uv_threshold] = 0.0
-        uv[uv >= uv_threshold] = 1.0
-
         f0 = f0 * (f0_global_max_min[0]
                    - f0_global_max_min[1]) + f0_global_max_min[1]
-        f0[f0 < f0_threshold] = f0_threshold
+    f0[f0 < f0_threshold] = f0_threshold
 
-        mel[:, -2] = f0
-        mel[:, -1] = uv
+    uv = mel[:, -1]
 
+    uv[uv < uv_threshold] = 0.0
+    uv[uv >= uv_threshold] = 1.0
+
+    mel[:, -2] = f0
+    mel[:, -1] = uv
     return mel
 
 
@@ -182,8 +172,14 @@ class Voice:
         self.ling_unit = KanTtsLinguisticUnit(self.am_config)
         self.ling_unit_size = self.ling_unit.get_unit_size()
         if self.ignore_mask:
-            target_set = set(('sy', 'tone', 'syllable_flag', 'word_segment',
-                              'emotion', 'speaker'))
+            target_set = {
+                'sy',
+                'tone',
+                'syllable_flag',
+                'word_segment',
+                'emotion',
+                'speaker',
+            }
             for k, v in self.ling_unit_size.items():
                 if k in target_set:
                     self.ling_unit_size[k] = v - 1
@@ -232,17 +228,16 @@ class Voice:
         ckpts = {}
         for filename in filelist:
             # checkpoint_X.pth
-            if len(filename) - 15 <= 0:
+            if len(filename) <= 15:
                 continue
-            if filename[-4:] == '.pth' and filename[0:10] == 'checkpoint':
+            if filename[-4:] == '.pth' and filename[:10] == 'checkpoint':
                 filename_prefix = filename.split('.')[0]
                 idx = int(filename_prefix.split('_')[-1])
                 path = os.path.join(ckpt_path, filename)
                 if input_not_dir and path != select_target:
                     continue
                 ckpts[idx] = path
-        od = OrderedDict(sorted(ckpts.items()))
-        return od
+        return OrderedDict(sorted(ckpts.items()))
 
     def load_am(self):
         self.am_model, _, _ = model_builder(self.am_config, self.device)
@@ -285,17 +280,17 @@ class Voice:
                         torch.from_numpy(
                             inputs_feat_lst[inputs_feat_index]).long().to(
                                 self.device))
-                    inputs_feat_index = inputs_feat_index + 1
+                    inputs_feat_index += 1
                     inputs_tone = (
                         torch.from_numpy(
                             inputs_feat_lst[inputs_feat_index]).long().to(
                                 self.device))
-                    inputs_feat_index = inputs_feat_index + 1
+                    inputs_feat_index += 1
                     inputs_syllable = (
                         torch.from_numpy(
                             inputs_feat_lst[inputs_feat_index]).long().to(
                                 self.device))
-                    inputs_feat_index = inputs_feat_index + 1
+                    inputs_feat_index += 1
                     inputs_ws = (
                         torch.from_numpy(
                             inputs_feat_lst[inputs_feat_index]).long().to(
@@ -303,12 +298,12 @@ class Voice:
                     inputs_ling = torch.stack(
                         [inputs_sy, inputs_tone, inputs_syllable, inputs_ws],
                         dim=-1).unsqueeze(0)
-                inputs_feat_index = inputs_feat_index + 1
+                inputs_feat_index += 1
                 inputs_emo = (
                     torch.from_numpy(
                         inputs_feat_lst[inputs_feat_index]).long().to(
                             self.device).unsqueeze(0))
-                inputs_feat_index = inputs_feat_index + 1
+                inputs_feat_index += 1
                 if self.se_enable:
                     inputs_spk = (
                         torch.from_numpy(
@@ -348,13 +343,7 @@ class Voice:
             y = y.view(-1).cpu().numpy()
             return y
 
-    def train_sambert(self,
-                      work_dir,
-                      stage_dir,
-                      data_dir,
-                      config_path,
-                      ignore_pretrain=False,
-                      hparams=dict()):
+    def train_sambert(self, work_dir, stage_dir, data_dir, config_path, ignore_pretrain=False, hparams={}):
         logger.info('TRAIN SAMBERT....')
         if len(self.am_ckpts) == 0:
             raise TtsTrainingInvalidModelException(
@@ -380,13 +369,12 @@ class Voice:
             if not os.path.exists(resume_from):
                 raise TtsTrainingInvalidModelException(
                     f'latest model:{resume_from} not exists')
-        else:
-            if from_steps not in self.am_ckpts:
-                raise TtsTrainingInvalidModelException(
-                    f'no such model from steps:{from_steps}')
-            else:
-                resume_from = self.am_ckpts[from_steps]
+        elif from_steps in self.am_ckpts:
+            resume_from = self.am_ckpts[from_steps]
 
+        else:
+            raise TtsTrainingInvalidModelException(
+                f'no such model from steps:{from_steps}')
         if train_steps > 0:
             train_max_steps = train_steps + from_steps
             config['train_max_steps'] = train_max_steps
@@ -450,7 +438,7 @@ class Voice:
 
         train_dataloader = DataLoader(
             train_dataset,
-            shuffle=False if self.distributed else True,
+            shuffle=not self.distributed,
             collate_fn=train_dataset.collate_fn,
             batch_size=config['batch_size'],
             num_workers=config['num_workers'],
@@ -458,15 +446,19 @@ class Voice:
             pin_memory=config['pin_memory'],
         )
 
-        valid_dataloader = DataLoader(
-            valid_dataset,
-            shuffle=False if self.distributed else True,
-            collate_fn=valid_dataset.collate_fn,
-            batch_size=config['batch_size'],
-            num_workers=config['num_workers'],
-            sampler=sampler['valid'],
-            pin_memory=config['pin_memory'],
-        ) if valid_enable else None
+        valid_dataloader = (
+            DataLoader(
+                valid_dataset,
+                shuffle=not self.distributed,
+                collate_fn=valid_dataset.collate_fn,
+                batch_size=config['batch_size'],
+                num_workers=config['num_workers'],
+                sampler=sampler['valid'],
+                pin_memory=config['pin_memory'],
+            )
+            if valid_enable
+            else None
+        )
 
         ling_unit_size = train_dataset.ling_unit.get_unit_size()
 
@@ -510,13 +502,7 @@ class Voice:
             logger.info(
                 f'Successfully saved checkpoint @ {trainer.steps}steps.')
 
-    def train_hifigan(self,
-                      work_dir,
-                      stage_dir,
-                      data_dir,
-                      config_path,
-                      ignore_pretrain=False,
-                      hparams=dict()):
+    def train_hifigan(self, work_dir, stage_dir, data_dir, config_path, ignore_pretrain=False, hparams={}):
         logger.info('TRAIN HIFIGAN....')
         if len(self.voc_ckpts) == 0:
             raise TtsTrainingInvalidModelException(
@@ -543,13 +529,12 @@ class Voice:
             if not os.path.exists(resume_from):
                 raise TtsTrainingInvalidModelException(
                     f'latest model:{resume_from} not exists')
-        else:
-            if from_steps not in self.voc_ckpts:
-                raise TtsTrainingInvalidModelException(
-                    f'no such model from steps:{from_steps}')
-            else:
-                resume_from = self.voc_ckpts[from_steps]
+        elif from_steps in self.voc_ckpts:
+            resume_from = self.voc_ckpts[from_steps]
 
+        else:
+            raise TtsTrainingInvalidModelException(
+                f'no such model from steps:{from_steps}')
         if train_steps > 0:
             train_max_steps = train_steps
             config['train_max_steps'] = train_max_steps
@@ -589,7 +574,7 @@ class Voice:
 
         train_dataloader = DataLoader(
             train_dataset,
-            shuffle=False if self.distributed else True,
+            shuffle=not self.distributed,
             collate_fn=train_dataset.collate_fn,
             batch_size=config['batch_size'],
             num_workers=config['num_workers'],
@@ -599,7 +584,7 @@ class Voice:
 
         valid_dataloader = DataLoader(
             valid_dataset,
-            shuffle=False if self.distributed else True,
+            shuffle=not self.distributed,
             collate_fn=valid_dataset.collate_fn,
             batch_size=config['batch_size'],
             num_workers=config['num_workers'],

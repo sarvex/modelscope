@@ -170,7 +170,7 @@ class FirstOrderAttention(nn.Module):
         self.conv_b = nn.ModuleList()
         self.conv_d = nn.ModuleList()
         self.linears = nn.ModuleList()
-        for i in range(self.num_subset):
+        for _ in range(self.num_subset):
             self.conv_a.append(nn.Conv2d(in_channels, inter_channels, 1))
             self.conv_b.append(nn.Conv2d(in_channels, inter_channels, 1))
             self.conv_d.append(nn.Conv2d(in_channels, out_channels, 1))
@@ -309,7 +309,7 @@ class HightOrderAttentionBlock(nn.Module):
             self.linears = nn.ModuleList()
             for hop_i in range(self.max_hop - 1):
                 hop_linear = nn.ModuleList()
-                for i in range(
+                for _ in range(
                         len(
                             eval(f'self.di_graph.directed_edges_hop{hop_i+2}'))
                 ):
@@ -332,7 +332,7 @@ class HightOrderAttentionBlock(nn.Module):
         if self.attention:
             fep_concat = None
             for hop_i in range(self.max_hop):
-                if 0 == hop_i:
+                if hop_i == 0:
                     fep_hop_i = (fvp[..., [
                         c for p, c in eval(
                             f'self.di_graph.directed_edges_hop{hop_i+1}')
@@ -340,7 +340,6 @@ class HightOrderAttentionBlock(nn.Module):
                         p for p, c in eval(
                             f'self.di_graph.directed_edges_hop{hop_i+1}')
                     ]]).contiguous()
-                    fep_hop_i = rearrange(fep_hop_i, 'N C T E -> (N T) E C')
                 else:
                     joints_parts = eval(
                         f'self.di_graph.directed_edges_hop{hop_i+1}')
@@ -351,10 +350,7 @@ class HightOrderAttentionBlock(nn.Module):
                             fep = (fvp[..., part[j + 1]]
                                    - fvp[..., part[j]]).contiguous().unsqueeze(
                                        dim=-1)
-                            if fep_part is None:
-                                fep_part = fep
-                            else:
-                                fep_part = torch.cat((fep_part, fep), dim=-1)
+                            fep_part = fep if fep_part is None else torch.cat((fep_part, fep), dim=-1)
                         fep_part = self.linears[hop_i - 1][part_idx](fep_part)
                         if fep_hop_i is None:
                             fep_hop_i = fep_part
@@ -362,8 +358,7 @@ class HightOrderAttentionBlock(nn.Module):
                             fep_hop_i = torch.cat((fep_hop_i, fep_part),
                                                   dim=-1)
 
-                    fep_hop_i = rearrange(fep_hop_i, 'N C T E -> (N T) E C')
-
+                fep_hop_i = rearrange(fep_hop_i, 'N C T E -> (N T) E C')
                 if fep_concat is None:
                     fep_concat = fep_hop_i
                 else:

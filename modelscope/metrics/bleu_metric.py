@@ -23,8 +23,8 @@ class BleuMetric(Metric):
         self.eval_tokenized_bleu = kwargs.get('eval_tokenized_bleu', False)
         self.hyp_name = kwargs.get('hyp_name', 'hyp')
         self.ref_name = kwargs.get('ref_name', 'ref')
-        self.refs = list()
-        self.hyps = list()
+        self.refs = []
+        self.hyps = []
 
     def add(self, outputs: Dict, inputs: Dict):
         self.refs.extend(inputs[self.ref_name])

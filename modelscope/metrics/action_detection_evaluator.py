@@ -44,10 +44,7 @@ class DetEvaluator(DatasetEvaluator):
         instances = copy.deepcopy(instances)
         name = 'gt_classes' if instances.has('gt_classes') else 'pred_classes'
         idxs = np.where(instances.get(name).numpy() == c)[0].tolist()
-        data = {}
-        for k, v in instances.get_fields().items():
-            data[k] = [v[i] for i in idxs]
-        return data
+        return {k: [v[i] for i in idxs] for k, v in instances.get_fields().items()}
 
     def evaluate(self):
         if self.distributed:
@@ -65,9 +62,11 @@ class DetEvaluator(DatasetEvaluator):
             aps, prs, ths = self.calc_map(iou_th)
             map = np.nanmean([x for x in aps if x > 0.01])
             maps.append(map)
-            logger.info(f'iou_th:{iou_th},' + 'Aps:'
-                        + ','.join([f'{ap:.2f}'
-                                    for ap in aps]) + f', {map:.3f}')
+            logger.info(
+                f'iou_th:{iou_th},Aps:'
+                + ','.join([f'{ap:.2f}' for ap in aps])
+                + f', {map:.3f}'
+            )
             precision, recall = zip(*prs)
             logger.info('precision:'
                         + ', '.join([f'{p:.2f}' for p in precision]))
@@ -78,14 +77,15 @@ class DetEvaluator(DatasetEvaluator):
             precisions.append(np.nanmean(precision))
             recalls.append(np.nanmean(recall))
 
-        res = OrderedDict({
-            'det': {
-                'mAP': np.nanmean(maps),
-                'precision': np.nanmean(precisions),
-                'recall': np.nanmean(recalls)
+        return OrderedDict(
+            {
+                'det': {
+                    'mAP': np.nanmean(maps),
+                    'precision': np.nanmean(precisions),
+                    'recall': np.nanmean(recalls),
+                }
             }
-        })
-        return res
+        )
 
     def calc_map(self, iou_th):
         aps = []
@@ -134,14 +134,13 @@ class DetEvaluator(DatasetEvaluator):
             gt_data = self.get_instance_by_class(gt, c)
             res = {}
             if c in gt_classes:
-                res.update({
+                res |= {
                     'gt_bbox': Boxes.cat(gt_data['gt_boxes']),
-                    'det': [False] * len(gt_data['gt_classes'])
-                })
+                    'det': [False] * len(gt_data['gt_classes']),
+                }
             if c in pred_classes:
-                res.update({'pred_bbox': Boxes.cat(pred_data['pred_boxes'])})
-                res.update(
-                    {'pred_score': [s.item() for s in pred_data['scores']]})
+                res['pred_bbox'] = Boxes.cat(pred_data['pred_boxes'])
+                res['pred_score'] = [s.item() for s in pred_data['scores']]
             class_res_gt[i] = res
             npos += len(gt_data['gt_classes'])
 
@@ -167,13 +166,10 @@ class DetEvaluator(DatasetEvaluator):
                 IoUs = pairwise_iou(pred_bbox, gt_bbox).numpy()
                 ovmax = IoUs[0].max()
                 jmax = np.argmax(IoUs[0])  # hit该图像的第几个gt
-            if ovmax > iou_th:
-                if not R['det'][jmax]:  # 该gt还没有预测过
-                    tp[d] = 1.0
-                    R['det'][jmax] = True
-                else:  # 重复预测
-                    fp[d] = 1.0
-            else:
+            if ovmax > iou_th and not R['det'][jmax]:  # 该gt还没有预测过
+                tp[d] = 1.0
+                R['det'][jmax] = True
+            else:  # 重复预测
                 fp[d] = 1.0
         fp = np.cumsum(fp)
         tp = np.cumsum(tp)
@@ -194,5 +190,4 @@ def interpolate_precision(rec, prec):
     rec, prec = rec[i], prec[i]
     f = interpolate.interp1d(rec, prec)
     r1 = np.linspace(0, 1, 101)
-    p1 = f(r1)
-    return p1
+    return f(r1)

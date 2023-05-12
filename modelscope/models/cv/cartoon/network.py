@@ -25,7 +25,7 @@ def spectral_norm(w, iteration=1):
 
     u_hat = u
     v_hat = None
-    for i in range(iteration):
+    for _ in range(iteration):
         """
         power iteration
         Usually iteration = 1 will be enough
@@ -88,8 +88,7 @@ def unet_generator(inputs,
         x2 = tf.nn.leaky_relu(x2)
 
         for idx in range(num_blocks):
-            x2 = resblock(
-                x2, out_channel=channel * 4, name='block_{}'.format(idx))
+            x2 = resblock(x2, out_channel=channel * 4, name=f'block_{idx}')
 
         x2 = slim.convolution2d(x2, channel * 2, [3, 3], activation_fn=None)
         x2 = tf.nn.leaky_relu(x2)
@@ -122,14 +121,11 @@ def disc_sn(x,
 
         for idx in range(3):
             x = conv_spectral_norm(
-                x,
-                channel * 2**idx, [3, 3],
-                stride=2,
-                name='conv{}_1'.format(idx))
+                x, channel * 2**idx, [3, 3], stride=2, name=f'conv{idx}_1'
+            )
             x = tf.nn.leaky_relu(x)
 
-            x = conv_spectral_norm(
-                x, channel * 2**idx, [3, 3], name='conv{}_2'.format(idx))
+            x = conv_spectral_norm(x, channel * 2**idx, [3, 3], name=f'conv{idx}_2')
             x = tf.nn.leaky_relu(x)
 
         if patch is True:
@@ -142,5 +138,3 @@ def disc_sn(x,
         return x
 
 
-if __name__ == '__main__':
-    pass

@@ -13,9 +13,7 @@ def expect_token_number(instr, token):
         return None
     instr = instr[first_token.end():]
     lr = re.match(r'^\s*(-?\d+\.?\d*e?-?\d*?)', instr)
-    if lr is None:
-        return None
-    return instr[lr.end():], lr.groups()[0]
+    return None if lr is None else (instr[lr.end():], lr.groups()[0])
 
 
 def expect_kaldi_matrix(instr):

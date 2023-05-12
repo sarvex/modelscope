@@ -48,11 +48,7 @@ class Repository:
             raise InvalidParameter(err_msg)
 
         from modelscope.hub.api import ModelScopeConfig
-        if auth_token:
-            self.auth_token = auth_token
-        else:
-            self.auth_token = ModelScopeConfig.get_token()
-
+        self.auth_token = auth_token if auth_token else ModelScopeConfig.get_token()
         git_wrapper = GitCommandWrapper()
         if not git_wrapper.is_lfs_installed():
             logger.error('git lfs is not installed, please install.')
@@ -78,8 +74,7 @@ class Repository:
             self.git_wrapper.config_auth_token(self.model_dir, self.auth_token)
 
     def _get_model_id_url(self, model_id):
-        url = f'{get_endpoint()}/{model_id}.git'
-        return url
+        return f'{get_endpoint()}/{model_id}.git'
 
     def _get_remote_url(self):
         try:
@@ -145,10 +140,10 @@ class Repository:
         Raises:
             InvalidParameter: no commit message.
         """
-        if tag_name is None or tag_name == '':
+        if tag_name is None or not tag_name:
             msg = 'We use tag-based revision, therefore tag_name cannot be None or empty.'
             raise InvalidParameter(msg)
-        if message is None or message == '':
+        if message is None or not message:
             msg = 'We use annotated tag, therefore message cannot None or empty.'
             raise InvalidParameter(msg)
         self.git_wrapper.tag(
@@ -215,11 +210,7 @@ class DatasetRepository:
             raise InvalidParameter(err_msg)
         self.revision = revision
         from modelscope.hub.api import ModelScopeConfig
-        if auth_token:
-            self.auth_token = auth_token
-        else:
-            self.auth_token = ModelScopeConfig.get_token()
-
+        self.auth_token = auth_token if auth_token else ModelScopeConfig.get_token()
         self.git_wrapper = GitCommandWrapper(git_path)
         os.makedirs(self.repo_work_dir, exist_ok=True)
         self.repo_url = self._get_repo_url(dataset_id=dataset_id)
@@ -233,7 +224,7 @@ class DatasetRepository:
             if remote_url and remote_url == self.repo_url:
                 return ''
 
-        logger.info('Cloning repo from {} '.format(self.repo_url))
+        logger.info(f'Cloning repo from {self.repo_url} ')
         self.git_wrapper.clone(self.repo_base_dir, self.auth_token,
                                self.repo_url, self.repo_name, self.revision)
         return self.repo_work_dir

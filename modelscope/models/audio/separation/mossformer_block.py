@@ -18,9 +18,7 @@ def default(val, d):
 
 def padding_to_multiple_of(n, mult):
     remainder = n % mult
-    if remainder == 0:
-        return 0
-    return mult - remainder
+    return 0 if remainder == 0 else mult - remainder
 
 
 class ScaleNorm(nn.Module):
@@ -74,8 +72,7 @@ class FFConvM(nn.Module):
             MossFormerConvModule(dim_out), nn.Dropout(dropout))
 
     def forward(self, x):
-        output = self.mdl(x)
-        return output
+        return self.mdl(x)
 
 
 class MossFormerBlock(nn.Module):

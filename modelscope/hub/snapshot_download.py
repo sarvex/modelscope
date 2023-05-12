@@ -78,8 +78,9 @@ def snapshot_download(model_id: str,
                 'Cannot find the requested files in the cached path and outgoing'
                 ' traffic has been disabled. To enable model look-ups and downloads'
                 " online, set 'local_files_only' to False.")
-        logger.warning('We can not confirm the cached file is for revision: %s'
-                       % revision)
+        logger.warning(
+            f'We can not confirm the cached file is for revision: {revision}'
+        )
         return cache.get_root_location(
         )  # we can not confirm the cached file is for snapshot 'revision'
     else:
@@ -114,10 +115,12 @@ def snapshot_download(model_id: str,
             ignore_file_pattern = [ignore_file_pattern]
 
         with tempfile.TemporaryDirectory(
-                dir=temporary_cache_dir) as temp_cache_dir:
+                        dir=temporary_cache_dir) as temp_cache_dir:
             for model_file in model_files:
-                if model_file['Type'] == 'tree' or \
-                        any([re.search(pattern, model_file['Name']) is not None for pattern in ignore_file_pattern]):
+                if model_file['Type'] == 'tree' or any(
+                    re.search(pattern, model_file['Name']) is not None
+                    for pattern in ignore_file_pattern
+                ):
                     continue
                 # check model_file is exist in cache, if existed, skip download, otherwise download
                 if cache.exists(model_file):

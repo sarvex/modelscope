@@ -286,8 +286,9 @@ class FSMNNet(nn.Module):
                 LinearTransform(linear_dim, proj_dim),
                 Fsmn(proj_dim, proj_dim, lorder, rorder, 1, 1),
                 AffineTransform(proj_dim, linear_dim),
-                RectifiedLinear(linear_dim, linear_dim))
-            for i in range(fsmn_layers)
+                RectifiedLinear(linear_dim, linear_dim),
+            )
+            for _ in range(fsmn_layers)
         ]
 
         return nn.Sequential(*repeats)
@@ -296,8 +297,7 @@ class FSMNNet(nn.Module):
         x1 = self.linear1(input)
         x2 = self.relu(x1)
         x3 = self.fsmn(x2)
-        x4 = self.linear2(x3)
-        return x4
+        return self.linear2(x3)
 
     def print_model(self):
         self.linear1.print_model()
@@ -364,8 +364,7 @@ class FSMNNet(nn.Module):
             print(f32ToI32(h))
 
     def to_kaldi_nnet(self):
-        re_str = ''
-        re_str += '<Nnet>\n'
+        re_str = '' + '<Nnet>\n'
         re_str += self.linear1.to_kaldi_nnet()
         re_str += self.relu.to_kaldi_nnet()
 
@@ -448,9 +447,7 @@ class DFSMN(nn.Module):
             out = x_per + self.conv_left(y_left)
 
         out1 = out.permute(0, 3, 2, 1)
-        output = input + out1.squeeze(1)
-
-        return output
+        return input + out1.squeeze(1)
 
     def print_model(self):
         self.expand.print_model()
@@ -491,7 +488,7 @@ def build_dfsmn_repeats(linear_dim=128,
     """
     repeats = [
         nn.Sequential(DFSMN(proj_dim, linear_dim, lorder, rorder, 1, 1))
-        for i in range(fsmn_layers)
+        for _ in range(fsmn_layers)
     ]
 
     return nn.Sequential(*repeats)

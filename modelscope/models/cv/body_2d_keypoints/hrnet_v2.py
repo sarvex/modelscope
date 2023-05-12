@@ -142,12 +142,9 @@ class PoseHighResolutionNetV2(TorchModel):
                 nn.BatchNorm2d(planes * block.expansion, momentum=BN_MOMENTUM),
             )
 
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers = [block(self.inplanes, planes, stride, downsample)]
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
-
+        layers.extend(block(self.inplanes, planes) for _ in range(1, blocks))
         return nn.Sequential(*layers)
 
     def _make_stage(self,
@@ -163,11 +160,7 @@ class PoseHighResolutionNetV2(TorchModel):
 
         modules = []
         for i in range(num_modules):
-            if not multi_scale_output and i == num_modules - 1:
-                reset_multi_scale_output = False
-            else:
-                reset_multi_scale_output = True
-
+            reset_multi_scale_output = bool(multi_scale_output or i != num_modules - 1)
             modules.append(
                 HighResolutionModule(num_branches, block, num_blocks,
                                      num_inchannels, num_channels, fuse_method,
@@ -218,6 +211,4 @@ class PoseHighResolutionNetV2(TorchModel):
         y3 = F.upsample(y_list[3], size=(y0_h, y0_w), mode='bilinear')
 
         y = torch.cat([y_list[0], y1, y2, y3], 1)
-        output = self.final_layer(y)
-
-        return output
+        return self.final_layer(y)

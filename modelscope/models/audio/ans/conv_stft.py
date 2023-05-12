@@ -58,13 +58,12 @@ class ConvSTFT(nn.Module):
 
         if self.feature_type == 'complex':
             return outputs
-        else:
-            dim = self.dim // 2 + 1
-            real = outputs[:, :dim, :]
-            imag = outputs[:, dim:, :]
-            mags = torch.sqrt(real**2 + imag**2)
-            phase = torch.atan2(imag, real)
-            return mags, phase
+        dim = self.dim // 2 + 1
+        real = outputs[:, :dim, :]
+        imag = outputs[:, dim:, :]
+        mags = torch.sqrt(real**2 + imag**2)
+        phase = torch.atan2(imag, real)
+        return mags, phase
 
 
 class ConviSTFT(nn.Module):

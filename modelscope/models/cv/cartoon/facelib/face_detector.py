@@ -16,7 +16,7 @@ class FaceDetector:
 
     def __init__(self, dir):
 
-        self.model_path = dir + '/detector.pb'
+        self.model_path = f'{dir}/detector.pb'
         self.thres = cfg.DETECT.thres
         self.input_shape = cfg.DETECT.input_shape
 

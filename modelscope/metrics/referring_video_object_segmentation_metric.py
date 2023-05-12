@@ -48,18 +48,15 @@ class ReferringVideoObjectSegmentationMetric(Metric):
             'AP 0.5:0.95 M', 'AP 0.5:0.95 L'
         ]
         ap_metrics = coco_eval.stats[:6]
-        eval_metrics = {la: m for la, m in zip(ap_labels, ap_metrics)}
+        eval_metrics = dict(zip(ap_labels, ap_metrics))
         if self.calculate_precision_and_iou_metrics:
             precision_at_k, overall_iou, mean_iou = calculate_precision_at_k_and_iou_metrics(
                 coco_gt, coco_pred)
-            eval_metrics.update({
+            eval_metrics |= {
                 f'P@{k}': m
                 for k, m in zip([0.5, 0.6, 0.7, 0.8, 0.9], precision_at_k)
-            })
-            eval_metrics.update({
-                'overall_iou': overall_iou,
-                'mean_iou': mean_iou
-            })
+            }
+            eval_metrics |= {'overall_iou': overall_iou, 'mean_iou': mean_iou}
 
         return eval_metrics
 
@@ -104,7 +101,7 @@ def calculate_precision_at_k_and_iou_metrics(coco_gt: COCO, coco_pred: COCO):
             torch.tensor(gt_mask).unsqueeze(0))
         iou, intersection, union = iou.item(), intersection.item(), union.item(
         )
-        for iou_threshold in counters_by_iou.keys():
+        for iou_threshold in counters_by_iou:
             if iou > iou_threshold:
                 counters_by_iou[iou_threshold] += 1
         total_intersection_area += intersection

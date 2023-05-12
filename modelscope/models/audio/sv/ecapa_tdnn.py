@@ -30,21 +30,19 @@ def length_to_mask(length, max_len=None, dtype=None, device=None):
     if device is None:
         device = length.device
 
-    mask = torch.as_tensor(mask, dtype=dtype, device=device)
-    return mask
+    return torch.as_tensor(mask, dtype=dtype, device=device)
 
 
 def get_padding_elem(L_in: int, stride: int, kernel_size: int, dilation: int):
     if stride > 1:
         n_steps = math.ceil(((L_in - kernel_size * dilation) / stride) + 1)
         L_out = stride * (n_steps - 1) + kernel_size * dilation
-        padding = [kernel_size // 2, kernel_size // 2]
+        return [kernel_size // 2, kernel_size // 2]
 
     else:
         L_out = (L_in - dilation * (kernel_size - 1) - 1) // stride + 1
 
-        padding = [(L_in - L_out) // 2, (L_in - L_out) // 2]
-    return padding
+        return [(L_in - L_out) // 2, (L_in - L_out) // 2]
 
 
 class Conv1d(nn.Module):
@@ -88,17 +86,12 @@ class Conv1d(nn.Module):
             num_pad = (self.kernel_size - 1) * self.dilation
             x = F.pad(x, (num_pad, 0))
 
-        elif self.padding == 'valid':
-            pass
-
-        else:
+        elif self.padding != 'valid':
             raise ValueError(
-                "Padding must be 'same', 'valid' or 'causal'. Got "
-                + self.padding)
+                f"Padding must be 'same', 'valid' or 'causal'. Got {self.padding}"
+            )
 
-        wx = self.conv(x)
-
-        return wx
+        return self.conv(x)
 
     def _manage_padding(
         self,
@@ -174,14 +167,17 @@ class Res2NetBlock(torch.nn.Module):
         in_channel = in_channels // scale
         hidden_channel = out_channels // scale
 
-        self.blocks = nn.ModuleList([
-            TDNNBlock(
-                in_channel,
-                hidden_channel,
-                kernel_size=kernel_size,
-                dilation=dilation,
-            ) for i in range(scale - 1)
-        ])
+        self.blocks = nn.ModuleList(
+            [
+                TDNNBlock(
+                    in_channel,
+                    hidden_channel,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                )
+                for _ in range(scale - 1)
+            ]
+        )
         self.scale = scale
 
     def forward(self, x):
@@ -194,8 +190,7 @@ class Res2NetBlock(torch.nn.Module):
             else:
                 y_i = self.blocks[i - 1](x_i + y_i)
             y.append(y_i)
-        y = torch.cat(y, dim=1)
-        return y
+        return torch.cat(y, dim=1)
 
 
 class SEBlock(nn.Module):
@@ -484,9 +479,7 @@ class SpeakerVerificationECAPATDNN(TorchModel):
             0] == 1, 'modelscope error: the shape of input audio to model needs to be [1, T]'
         # audio shape: [1, T]
         feature = self.__extract_feature(audio)
-        embedding = self.embedding_model(feature)
-
-        return embedding
+        return self.embedding_model(feature)
 
     def __extract_feature(self, audio):
         feature = Kaldi.fbank(audio, num_mel_bins=self.feature_dim)

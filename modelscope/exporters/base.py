@@ -38,9 +38,7 @@ class Exporter(ABC):
         model_dir = model.model_dir
         cfg = Config.from_file(
             os.path.join(model_dir, ModelFile.CONFIGURATION))
-        task_name = cfg.task
-        if hasattr(model, 'group_key'):
-            task_name = model.group_key
+        task_name = model.group_key if hasattr(model, 'group_key') else cfg.task
         model_cfg = cfg.model
         if hasattr(model_cfg, 'model_type') and not hasattr(model_cfg, 'type'):
             model_cfg.type = model_cfg.model_type

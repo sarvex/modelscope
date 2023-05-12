@@ -11,9 +11,7 @@ from modelscope.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-if version.parse(tf.__version__) < version.parse('2'):
-    pass
-else:
+if version.parse(tf.__version__) >= version.parse('2'):
     logger.info(
         f'TensorFlow version {_tf_version} found, TF2.x is not supported by CartoonTranslationExporter.'
     )

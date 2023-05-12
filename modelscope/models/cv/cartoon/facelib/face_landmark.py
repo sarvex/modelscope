@@ -13,7 +13,7 @@ if tf.__version__ >= '2.0':
 class FaceLandmark:
 
     def __init__(self, dir):
-        self.model_path = dir + '/keypoints.pb'
+        self.model_path = f'{dir}/keypoints.pb'
         self.min_face = 60
         self.keypoint_num = cfg.KEYPOINTS.p_num * 2
 
@@ -145,11 +145,7 @@ class FaceLandmark:
             # saver.save(sess, save_path='./tmp.ckpt')
             return (compute_graph, sess)
 
-        if use_pb:
-            model = init_pb(pb_path)
-        else:
-            model = ini_ckpt()
-
+        model = init_pb(pb_path) if use_pb else ini_ckpt()
         graph = model[0]
         sess = model[1]
 

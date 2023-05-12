@@ -139,9 +139,9 @@ class ImageInstanceSegmentationCOCOMetric(Metric):
                 for saving json files when jsonfile_prefix is not specified.
         """
         assert isinstance(results, list), 'results must be a list'
-        assert len(results) == len(img_ids), (
-            'The length of results is not equal to the dataset len: {} != {}'.
-            format(len(results), len(img_ids)))
+        assert len(results) == len(
+            img_ids
+        ), f'The length of results is not equal to the dataset len: {len(results)} != {len(img_ids)}'
 
         if jsonfile_prefix is None:
             tmp_dir = tempfile.TemporaryDirectory()
@@ -178,9 +178,7 @@ class ImageInstanceSegmentationCOCOMetric(Metric):
             img_id = self.img_ids[idx]
             bboxes = results[idx]
             for i in range(bboxes.shape[0]):
-                data = dict()
-                data['image_id'] = img_id
-                data['bbox'] = self.xyxy2xywh(bboxes[i])
+                data = {'image_id': img_id, 'bbox': self.xyxy2xywh(bboxes[i])}
                 data['score'] = float(bboxes[i][4])
                 data['category_id'] = 1
                 json_results.append(data)
@@ -201,9 +199,7 @@ class ImageInstanceSegmentationCOCOMetric(Metric):
                     break
                 bboxes = result[label]
                 for i in range(bboxes.shape[0]):
-                    data = dict()
-                    data['image_id'] = img_id
-                    data['bbox'] = self.xyxy2xywh(bboxes[i])
+                    data = {'image_id': img_id, 'bbox': self.xyxy2xywh(bboxes[i])}
                     data['score'] = float(bboxes[i][4])
                     data['category_id'] = self.cat_ids[label]
                     json_results.append(data)
@@ -226,9 +222,7 @@ class ImageInstanceSegmentationCOCOMetric(Metric):
                 # bbox results
                 bboxes = det[label]
                 for i in range(bboxes.shape[0]):
-                    data = dict()
-                    data['image_id'] = img_id
-                    data['bbox'] = self.xyxy2xywh(bboxes[i])
+                    data = {'image_id': img_id, 'bbox': self.xyxy2xywh(bboxes[i])}
                     data['score'] = float(bboxes[i][4])
                     data['category_id'] = self.cat_ids[label]
                     bbox_json_results.append(data)
@@ -242,7 +236,7 @@ class ImageInstanceSegmentationCOCOMetric(Metric):
                     segms = seg[label]
                     mask_score = [bbox[4] for bbox in bboxes]
                 for i in range(bboxes.shape[0]):
-                    data = dict()
+                    data = {}
                     data['image_id'] = img_id
                     data['bbox'] = self.xyxy2xywh(bboxes[i])
                     data['score'] = float(mask_score[i])
@@ -272,7 +266,7 @@ class ImageInstanceSegmentationCOCOMetric(Metric):
             dict[str: str]: Possible keys are "bbox", "segm", "proposal", and \
                 values are corresponding filenames.
         """
-        result_files = dict()
+        result_files = {}
         if isinstance(results[0], list):
             json_results = self._det2json(results)
             result_files['bbox'] = f'{outfile_prefix}.bbox.json'

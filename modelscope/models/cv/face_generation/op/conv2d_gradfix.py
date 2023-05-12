@@ -103,7 +103,7 @@ def ensure_tuple(xs, ndim):
     return xs
 
 
-conv2d_gradfix_cache = dict()
+conv2d_gradfix_cache = {}
 
 
 def conv2d_gradfix(transpose, weight_shape, stride, padding, output_padding,

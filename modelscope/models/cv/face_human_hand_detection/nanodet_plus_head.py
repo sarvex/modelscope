@@ -75,8 +75,7 @@ def batched_nms(boxes, scores, idxs, nms_cfg, class_agnostic=False):
         tuple: kept dets and indice.
     """
     nms_cfg_ = nms_cfg.copy()
-    class_agnostic = nms_cfg_.pop('class_agnostic', class_agnostic)
-    if class_agnostic:
+    if class_agnostic := nms_cfg_.pop('class_agnostic', class_agnostic):
         boxes_for_nms = boxes
     else:
         max_coordinate = boxes.max()
@@ -86,8 +85,6 @@ def batched_nms(boxes, scores, idxs, nms_cfg, class_agnostic=False):
     split_thr = nms_cfg_.pop('split_thr', 10000)
     if len(boxes_for_nms) < split_thr:
         keep = nms(boxes_for_nms, scores, **nms_cfg_)
-        boxes = boxes[keep]
-        scores = scores[keep]
     else:
         total_mask = scores.new_zeros(scores.size(), dtype=torch.bool)
         for id in torch.unique(idxs):
@@ -97,9 +94,8 @@ def batched_nms(boxes, scores, idxs, nms_cfg, class_agnostic=False):
 
         keep = total_mask.nonzero(as_tuple=False).view(-1)
         keep = keep[scores[keep].argsort(descending=True)]
-        boxes = boxes[keep]
-        scores = scores[keep]
-
+    boxes = boxes[keep]
+    scores = scores[keep]
     return torch.cat([boxes, scores[:, None]], -1), keep
 
 
@@ -189,21 +185,19 @@ def distance2bbox(points, distance, max_shape=None):
 
 
 def warp_boxes(boxes, M, width, height):
-    n = len(boxes)
-    if n:
-        xy = np.ones((n * 4, 3))
-        xy[:, :2] = boxes[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)
-        xy = xy @ M.T
-        xy = (xy[:, :2] / xy[:, 2:3]).reshape(n, 8)
-        x = xy[:, [0, 2, 4, 6]]
-        y = xy[:, [1, 3, 5, 7]]
-        xy = np.concatenate(
-            (x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
-        xy[:, [0, 2]] = xy[:, [0, 2]].clip(0, width)
-        xy[:, [1, 3]] = xy[:, [1, 3]].clip(0, height)
-        return xy.astype(np.float32)
-    else:
+    if not (n := len(boxes)):
         return boxes
+    xy = np.ones((n * 4, 3))
+    xy[:, :2] = boxes[:, [0, 1, 2, 3, 0, 3, 2, 1]].reshape(n * 4, 2)
+    xy = xy @ M.T
+    xy = (xy[:, :2] / xy[:, 2:3]).reshape(n, 8)
+    x = xy[:, [0, 2, 4, 6]]
+    y = xy[:, [1, 3, 5, 7]]
+    xy = np.concatenate(
+        (x.min(1), y.min(1), x.max(1), y.max(1))).reshape(4, n).T
+    xy[:, [0, 2]] = xy[:, [0, 2]].clip(0, width)
+    xy[:, [1, 3]] = xy[:, [1, 3]].clip(0, height)
+    return xy.astype(np.float32)
 
 
 class NanoDetPlusHead(nn.Module):
@@ -304,8 +298,7 @@ class NanoDetPlusHead(nn.Module):
                 feat = conv(feat)
             output = gfl_cls(feat)
             outputs.append(output.flatten(start_dim=2))
-        outputs = torch.cat(outputs, dim=2).permute(0, 2, 1)
-        return outputs
+        return torch.cat(outputs, dim=2).permute(0, 2, 1)
 
     def post_process(self, preds, meta):
         """Prediction results post processing. Decode bboxes and rescale
@@ -318,9 +311,7 @@ class NanoDetPlusHead(nn.Module):
             [self.num_classes, 4 * (self.reg_max + 1)], dim=-1)
         result_list = self.get_bboxes(cls_scores, bbox_preds, meta)
         det_results = {}
-        warp_matrixes = (
-            meta['warp_matrix']
-            if isinstance(meta['warp_matrix'], list) else meta['warp_matrix'])
+        warp_matrixes = meta['warp_matrix']
         img_heights = (
             meta['img_info']['height'].cpu().numpy() if isinstance(
                 meta['img_info']['height'], torch.Tensor) else

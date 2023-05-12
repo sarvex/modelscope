@@ -226,8 +226,7 @@ def _ssim(img, img2, max_value):
 
 
 def _3d_gaussian_calculator(img, conv3d):
-    out = conv3d(img.unsqueeze(0).unsqueeze(0)).squeeze(0).squeeze(0)
-    return out
+    return conv3d(img.unsqueeze(0).unsqueeze(0)).squeeze(0).squeeze(0)
 
 
 def _generate_3d_gaussian_kernel():

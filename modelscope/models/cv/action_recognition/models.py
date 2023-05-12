@@ -35,8 +35,7 @@ class BaseVideoModel(nn.Module):
         elif cfg.MODEL.NAME == 'S3DG':
             self.backbone = Inception3D(cfg)
         else:
-            error_str = 'backbone {} is not supported, ConvNeXt_tiny or S3DG is supported'.format(
-                cfg.MODEL.NAME)
+            error_str = f'backbone {cfg.MODEL.NAME} is not supported, ConvNeXt_tiny or S3DG is supported'
             raise NotImplementedError(error_str)
 
         # the head is created according to the heads
@@ -46,8 +45,7 @@ class BaseVideoModel(nn.Module):
         elif cfg.VIDEO.HEAD.NAME == 'AvgHead':
             self.head = AvgHead(cfg)
         else:
-            error_str = 'head {} is not supported, BaseHead or AvgHead is supported'.format(
-                cfg.VIDEO.HEAD.NAME)
+            error_str = f'head {cfg.VIDEO.HEAD.NAME} is not supported, BaseHead or AvgHead is supported'
             raise NotImplementedError(error_str)
 
     def forward(self, x):
@@ -90,18 +88,16 @@ class BaseHead(nn.Module):
         elif activation_func == 'sigmoid':
             self.activation = nn.Sigmoid()
         else:
-            raise NotImplementedError('{} is not supported as an activation'
-                                      'function.'.format(activation_func))
+            raise NotImplementedError(
+                f'{activation_func} is not supported as an activationfunction.'
+            )
 
     def forward(self, x):
         if len(x.shape) == 5:
             x = self.global_avg_pool(x)
             # (N, C, T, H, W) -> (N, T, H, W, C).
             x = x.permute((0, 2, 3, 4, 1))
-        if hasattr(self, 'dropout'):
-            out = self.dropout(x)
-        else:
-            out = x
+        out = self.dropout(x) if hasattr(self, 'dropout') else x
         out = self.out(out)
         out = self.activation(out)
         out = out.view(out.shape[0], -1)

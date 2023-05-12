@@ -19,9 +19,7 @@ def calculate_psnr(img, img2):
     img2 = img2.astype(np.float64)
 
     mse = np.mean((img - img2)**2)
-    if mse == 0:
-        return float('inf')
-    return 10. * np.log10(255. * 255. / mse)
+    return float('inf') if mse == 0 else 10. * np.log10(255. * 255. / mse)
 
 
 @METRICS.register_module(

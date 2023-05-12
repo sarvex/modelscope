@@ -19,23 +19,18 @@ def bbox2result(bboxes, labels, num_classes, kps=None, num_kps=5):
     """
     bbox_len = 5 if kps is None else 5 + num_kps * 2  # if has kps, add num_kps*2 into bbox
     if bboxes.shape[0] == 0:
+        return [np.zeros((0, bbox_len), dtype=np.float32) for _ in range(num_classes)]
+    if isinstance(bboxes, torch.Tensor):
+        bboxes = bboxes.detach().cpu().numpy()
+        labels = labels.detach().cpu().numpy()
+    if kps is None:
+        return [bboxes[labels == i, :] for i in range(num_classes)]
+    if isinstance(kps, torch.Tensor):
+        kps = kps.detach().cpu().numpy()
         return [
-            np.zeros((0, bbox_len), dtype=np.float32)
+            np.hstack([bboxes[labels == i, :], kps[labels == i, :]])
             for i in range(num_classes)
         ]
-    else:
-        if isinstance(bboxes, torch.Tensor):
-            bboxes = bboxes.detach().cpu().numpy()
-            labels = labels.detach().cpu().numpy()
-        if kps is None:
-            return [bboxes[labels == i, :] for i in range(num_classes)]
-        else:  # with kps
-            if isinstance(kps, torch.Tensor):
-                kps = kps.detach().cpu().numpy()
-                return [
-                    np.hstack([bboxes[labels == i, :], kps[labels == i, :]])
-                    for i in range(num_classes)
-                ]
 
 
 def distance2kps(points, distance, max_shape=None):
@@ -57,8 +52,7 @@ def distance2kps(points, distance, max_shape=None):
         if max_shape is not None:
             px = px.clamp(min=0, max=max_shape[1])
             py = py.clamp(min=0, max=max_shape[0])
-        preds.append(px)
-        preds.append(py)
+        preds.extend((px, py))
     return torch.stack(preds, -1)
 
 
@@ -82,6 +76,5 @@ def kps2distance(points, kps, max_dis=None, eps=0.1):
         if max_dis is not None:
             px = px.clamp(min=0, max=max_dis - eps)
             py = py.clamp(min=0, max=max_dis - eps)
-        preds.append(px)
-        preds.append(py)
+        preds.extend((px, py))
     return torch.stack(preds, -1)

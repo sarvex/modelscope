@@ -21,8 +21,7 @@ class GroupTrack():
             previous_lm_num = self.previous_landmarks_set.shape[0]
             if previous_lm_num == 0:
                 self.previous_landmarks_set = current_landmarks_set
-                result = current_landmarks_set
-                return result
+                return current_landmarks_set
             else:
                 result = []
                 for i in range(current_landmarks_set.shape[0]):
@@ -74,8 +73,7 @@ class GroupTrack():
         # judge if there is an intersect
         intersect = max(0, x2 - x1) * max(0, y2 - y1)
 
-        iou = intersect / (sum_area - intersect)
-        return iou
+        return intersect / (sum_area - intersect)
 
     def smooth(self, now_landmarks, previous_landmarks):
         result = []
@@ -93,5 +91,4 @@ class GroupTrack():
         return np.array(result)
 
     def do_moving_average(self, p_now, p_previous):
-        p = self.alpha * p_now + (1 - self.alpha) * p_previous
-        return p
+        return self.alpha * p_now + (1 - self.alpha) * p_previous

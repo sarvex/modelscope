@@ -115,7 +115,7 @@ class TorchModelExporter(Exporter):
         try:
             sig = _signature(model)
         except ValueError as e:
-            logger.warning('%s, skipping _decide_input_format' % e)
+            logger.warning(f'{e}, skipping _decide_input_format')
             return args
         try:
             ordered_list_keys = list(sig.parameters.keys())
@@ -199,15 +199,11 @@ class TorchModelExporter(Exporter):
             with replace_call():
                 onnx_export(
                     model,
-                    (dummy_inputs, ),
+                    (dummy_inputs,),
                     f=output,
                     input_names=list(inputs.keys()),
                     output_names=onnx_outputs,
-                    dynamic_axes={
-                        name: axes
-                        for name, axes in chain(inputs.items(),
-                                                outputs.items())
-                    },
+                    dynamic_axes=dict(chain(inputs.items(), outputs.items())),
                     do_constant_folding=True,
                     opset_version=opset,
                 )

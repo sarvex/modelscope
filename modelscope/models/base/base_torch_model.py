@@ -140,8 +140,7 @@ class TorchModel(Model, torch.nn.Module):
         """
         if version.parse(torch.__version__) >= version.parse('2.0.0.dev'):
             return torch.compile(self, **kwargs)
-        else:
-            logger.warning(
-                f'Torch compiling needs torch version >= 2.0.0, your torch version is : {torch.__version__},'
-                f' returns original model')
-            return self
+        logger.warning(
+            f'Torch compiling needs torch version >= 2.0.0, your torch version is : {torch.__version__},'
+            f' returns original model')
+        return self

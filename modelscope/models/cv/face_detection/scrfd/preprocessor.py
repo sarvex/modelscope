@@ -66,26 +66,27 @@ class SCRFDPreprocessor(Preprocessor):
         if isinstance(data, str):
             img = LoadImage.convert_to_ndarray(data)
             img = img.astype(np.float32)
-            data_dict = {}
-            data_dict['filename'] = ''
-            data_dict['ori_filename'] = ''
-            data_dict['img'] = img
-            data_dict['img_shape'] = img.shape
-            data_dict['ori_shape'] = img.shape
-            data_dict['img_fields'] = ['img']
+            data_dict = {
+                'filename': '',
+                'ori_filename': '',
+                'img': img,
+                'img_shape': img.shape,
+                'ori_shape': img.shape,
+                'img_fields': ['img'],
+            }
         elif isinstance(data, (np.ndarray, Image.Image)):
             if isinstance(data, Image.Image):
                 data = LoadImage.convert_to_ndarray(data)
 
             data = data.astype(np.float32)
-            data_dict = {}
-            data_dict['filename'] = ''
-            data_dict['ori_filename'] = ''
-            data_dict['img'] = data
-            data_dict['img_shape'] = data.shape
-            data_dict['ori_shape'] = data.shape
-            data_dict['img_fields'] = ['img']
-
+            data_dict = {
+                'filename': '',
+                'ori_filename': '',
+                'img': data,
+                'img_shape': data.shape,
+                'ori_shape': data.shape,
+                'img_fields': ['img'],
+            }
         elif isinstance(data, dict):
             data_dict = data
 

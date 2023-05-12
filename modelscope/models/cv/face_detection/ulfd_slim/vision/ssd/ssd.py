@@ -72,10 +72,7 @@ class SSD(nn.Module):
                 path = None
             for layer in self.base_net[start_layer_index:end_layer_index]:
                 x = layer(x)
-            if added_layer:
-                y = added_layer(x)
-            else:
-                y = x
+            y = added_layer(x) if added_layer else x
             if path:
                 sub = getattr(self.base_net[end_layer_index], path.name)
                 for layer in sub[:path.s1]:
@@ -103,15 +100,14 @@ class SSD(nn.Module):
         confidences = torch.cat(confidences, 1)
         locations = torch.cat(locations, 1)
 
-        if self.is_test:
-            confidences = F.softmax(confidences, dim=2)
-            boxes = box_utils.convert_locations_to_boxes(
-                locations, self.priors, self.config.center_variance,
-                self.config.size_variance)
-            boxes = box_utils.center_form_to_corner_form(boxes)
-            return confidences, boxes
-        else:
+        if not self.is_test:
             return confidences, locations
+        confidences = F.softmax(confidences, dim=2)
+        boxes = box_utils.convert_locations_to_boxes(
+            locations, self.priors, self.config.center_variance,
+            self.config.size_variance)
+        boxes = box_utils.center_form_to_corner_form(boxes)
+        return confidences, boxes
 
     def compute_header(self, i, x):
         confidence = self.classification_headers[i](x)

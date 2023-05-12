@@ -41,20 +41,24 @@ def get_cache_dir(model_id: Optional[str] = None):
     default_cache_dir = get_default_cache_dir()
     base_path = os.getenv('MODELSCOPE_CACHE',
                           os.path.join(default_cache_dir, 'hub'))
-    return base_path if model_id is None else os.path.join(
-        base_path, model_id + '/')
+    return (
+        base_path
+        if model_id is None
+        else os.path.join(base_path, f'{model_id}/')
+    )
 
 
 def get_release_datetime():
     if MODELSCOPE_SDK_DEBUG in os.environ:
-        rt = int(round(datetime.now().timestamp()))
-    else:
-        from modelscope import version
-        rt = int(
-            round(
-                datetime.strptime(version.__release_datetime__,
-                                  '%Y-%m-%d %H:%M:%S').timestamp()))
-    return rt
+        return int(round(datetime.now().timestamp()))
+    from modelscope import version
+    return int(
+        round(
+            datetime.strptime(
+                version.__release_datetime__, '%Y-%m-%d %H:%M:%S'
+            ).timestamp()
+        )
+    )
 
 
 def get_endpoint():
@@ -68,10 +72,10 @@ def compute_hash(file_path):
     sha256_hash = hashlib.sha256()
     with open(file_path, 'rb') as f:
         while True:
-            data = f.read(BUFFER_SIZE)
-            if not data:
+            if data := f.read(BUFFER_SIZE):
+                sha256_hash.update(data)
+            else:
                 break
-            sha256_hash.update(data)
     return sha256_hash.hexdigest()
 
 
@@ -87,8 +91,8 @@ def file_integrity_validation(file_path, expected_sha256):
 
     """
     file_sha256 = compute_hash(file_path)
-    if not file_sha256 == expected_sha256:
+    if file_sha256 != expected_sha256:
         os.remove(file_path)
-        msg = 'File %s integrity check failed, the download may be incomplete, please try again.' % file_path
+        msg = f'File {file_path} integrity check failed, the download may be incomplete, please try again.'
         logger.error(msg)
         raise FileIntegrityError(msg)

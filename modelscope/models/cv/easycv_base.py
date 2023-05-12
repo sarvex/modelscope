@@ -14,12 +14,11 @@ class EasyCVBaseModel(BaseModel, TorchModel):
         TorchModel.__init__(self, model_dir=model_dir)
 
     def forward(self, img, mode='train', **kwargs):
-        if self.training:
-            losses = self.forward_train(img, **kwargs)
-            loss, log_vars = self._parse_losses(losses)
-            return dict(loss=loss, log_vars=log_vars)
-        else:
+        if not self.training:
             return self.forward_test(img, **kwargs)
+        losses = self.forward_train(img, **kwargs)
+        loss, log_vars = self._parse_losses(losses)
+        return dict(loss=loss, log_vars=log_vars)
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)

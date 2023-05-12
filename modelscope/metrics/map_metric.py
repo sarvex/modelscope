@@ -28,14 +28,20 @@ class AveragePrecisionMetric(Metric):
     def add(self, outputs: Dict, inputs: Dict):
         label_name = OutputKeys.LABEL if OutputKeys.LABEL in inputs else OutputKeys.LABELS
         ground_truths = inputs[label_name]
-        eval_results = outputs[label_name]
-        for key in [
-                OutputKeys.CAPTION, OutputKeys.TEXT, OutputKeys.BOXES,
-                OutputKeys.LABELS, OutputKeys.SCORES
-        ]:
-            if key in outputs and outputs[key] is not None:
-                eval_results = outputs[key]
-                break
+        eval_results = next(
+            (
+                outputs[key]
+                for key in [
+                    OutputKeys.CAPTION,
+                    OutputKeys.TEXT,
+                    OutputKeys.BOXES,
+                    OutputKeys.LABELS,
+                    OutputKeys.SCORES,
+                ]
+                if key in outputs and outputs[key] is not None
+            ),
+            outputs[label_name],
+        )
         assert type(ground_truths) == type(eval_results)
         for truth in ground_truths:
             self.labels.append(truth)

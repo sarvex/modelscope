@@ -84,8 +84,7 @@ class Vgg19:
             filt = self.get_conv_filter(name)
             conv = tf.nn.conv2d(bottom, filt, [1, 1, 1, 1], padding='SAME')
             conv_biases = self.get_bias(name)
-            bias = tf.nn.bias_add(conv, conv_biases)
-            return bias
+            return tf.nn.bias_add(conv, conv_biases)
 
     def fc_layer(self, bottom, name):
         with tf.variable_scope(name):
@@ -96,9 +95,7 @@ class Vgg19:
             x = tf.reshape(bottom, [-1, dim])
             weights = self.get_fc_weight(name)
             biases = self.get_bias(name)
-            fc = tf.nn.bias_add(tf.matmul(x, weights), biases)
-
-            return fc
+            return tf.nn.bias_add(tf.matmul(x, weights), biases)
 
     def get_conv_filter(self, name):
         return tf.constant(self.data_dict[name][0], name='filter')
@@ -120,9 +117,7 @@ def content_loss(model_dir, input_photo, transfer_res, input_superpixel):
     photo_loss = tf.reduce_mean(abs_photo) / (h * w * c)
     abs_superpixel = tf.losses.absolute_difference(vgg_superpixel, vgg_output)
     superpixel_loss = tf.reduce_mean(abs_superpixel) / (h * w * c)
-    loss = photo_loss + superpixel_loss
-
-    return loss
+    return photo_loss + superpixel_loss
 
 
 def style_loss(input_cartoon, output_cartoon):
@@ -199,8 +194,7 @@ def total_variation_loss(image, k_size=1):
         (image[:, k_size:, :, :] - image[:, :h - k_size, :, :])**2)
     tv_w = tf.reduce_mean(
         (image[:, :, k_size:, :] - image[:, :, :w - k_size, :])**2)
-    tv_loss = (tv_h + tv_w) / (3 * h * w)
-    return tv_loss
+    return (tv_h + tv_w) / (3 * h * w)
 
 
 def guided_filter(x, y, r, eps=1e-2):
@@ -219,9 +213,7 @@ def guided_filter(x, y, r, eps=1e-2):
     mean_A = tf_box_filter(A, r) / N
     mean_b = tf_box_filter(b, r) / N
 
-    output = mean_A * x + mean_b
-
-    return output
+    return mean_A * x + mean_b
 
 
 def color_shift(image1, image2, mode='uniform'):
@@ -266,9 +258,6 @@ def tf_box_filter(x, r):
     weight = 1 / ((2 * r + 1)**2)
     box_kernel = weight * np.ones((2 * r + 1, 2 * r + 1, ch, 1))
     box_kernel = np.array(box_kernel).astype(np.float32)
-    output = tf.nn.depthwise_conv2d(x, box_kernel, [1, 1, 1, 1], 'SAME')
-    return output
+    return tf.nn.depthwise_conv2d(x, box_kernel, [1, 1, 1, 1], 'SAME')
 
 
-if __name__ == '__main__':
-    pass

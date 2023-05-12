@@ -24,8 +24,7 @@ def normalize_incidence_matrix(im: np.ndarray) -> np.ndarray:
     for i in range(num_node):
         if Dl[i] > 0:
             Dn[i, i] = Dl[i]**(-1)
-    res = Dn @ im
-    return res
+    return Dn @ im
 
 
 def build_digraph_incidence_matrix(num_nodes: int,
@@ -112,8 +111,7 @@ class Graph():
         # edge is a list of [child, parent] paris
         self.num_node = len(skeleton.parents())
         self_link = [(i, i) for i in range(self.num_node)]
-        neighbor_link = [(child, parent)
-                         for child, parent in enumerate(skeleton.parents())]
+        neighbor_link = list(enumerate(skeleton.parents()))
         self.self_link = self_link
         self.neighbor_link = neighbor_link
         self.edge = self_link + neighbor_link
@@ -134,7 +132,7 @@ class Graph():
             A = np.zeros((len(valid_hop), self.num_node, self.num_node))
             for i, hop in enumerate(valid_hop):
                 A[i][self.hop_dis == hop] = \
-                    normalize_adjacency[self.hop_dis == hop]
+                        normalize_adjacency[self.hop_dis == hop]
             self.A = A
         elif strategy == 'spatial':
             A = []
@@ -156,8 +154,7 @@ class Graph():
                 if hop == 0:
                     A.append(a_root)
                 else:
-                    A.append(a_root + a_close)
-                    A.append(a_further)
+                    A.extend((a_root + a_close, a_further))
             A = np.stack(A)
             self.A = A
         elif strategy == 'agcn':
@@ -194,8 +191,7 @@ def normalize_digraph(A):
     for i in range(num_node):
         if Dl[i] > 0:
             Dn[i, i] = Dl[i]**(-1)
-    AD = np.dot(A, Dn)
-    return AD
+    return np.dot(A, Dn)
 
 
 def normalize_undigraph(A):
@@ -205,5 +201,4 @@ def normalize_undigraph(A):
     for i in range(num_node):
         if Dl[i] > 0:
             Dn[i, i] = Dl[i]**(-0.5)
-    DAD = np.dot(np.dot(Dn, A), Dn)
-    return DAD
+    return np.dot(np.dot(Dn, A), Dn)

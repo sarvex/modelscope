@@ -46,10 +46,9 @@ class SambertHifigan(Model):
                 self.is_train = is_train
         # check legacy modelcard
         self.ignore_mask = False
-        if 'am' in kwargs:
-            if 'linguistic_unit' in kwargs['am']:
-                self.ignore_mask = not kwargs['am']['linguistic_unit'].get(
-                    'has_mask', True)
+        if 'am' in kwargs and 'linguistic_unit' in kwargs['am']:
+            self.ignore_mask = not kwargs['am']['linguistic_unit'].get(
+                'has_mask', True)
         self.voices, self.voice_cfg, self.lang_type = self.load_voice(
             model_dir, kwargs.get('custom_ckpt', {}))
         if len(self.voices) == 0 or len(self.voice_cfg.get('voices', [])) == 0:
@@ -68,19 +67,18 @@ class SambertHifigan(Model):
             zip_ref.extractall(model_dir)
         if not frontend.initialize(self.res_path):
             raise TtsFrontendInitializeFailedException(
-                'modelscope error: resource invalid: {}'.format(self.res_path))
+                f'modelscope error: resource invalid: {self.res_path}'
+            )
         if not frontend.set_lang_type(self.lang_type):
             raise TtsFrontendLanguageTypeInvalidException(
-                'modelscope error: language type invalid: {}'.format(
-                    self.lang_type))
+                f'modelscope error: language type invalid: {self.lang_type}'
+            )
         self.frontend = frontend
 
     def build_voice_from_custom(self, model_dir, custom_ckpt):
         necessary_files = (TtsCustomParams.VOICE_NAME, TtsCustomParams.AM_CKPT,
                            TtsCustomParams.VOC_CKPT, TtsCustomParams.AM_CONFIG,
                            TtsCustomParams.VOC_CONFIG)
-        voices = {}
-        voices_cfg = {}
         lang_type = 'PinYin'
         for k in necessary_files:
             if k not in custom_ckpt:
@@ -93,8 +91,8 @@ class SambertHifigan(Model):
             custom_ckpt=custom_ckpt,
             ignore_mask=self.ignore_mask,
             is_train=self.is_train)
-        voices[voice_name] = voice
-        voices_cfg['voices'] = [voice_name]
+        voices = {voice_name: voice}
+        voices_cfg = {'voices': [voice_name]}
         lang_type = voice.lang_type
         return voices, voices_cfg, lang_type
 
@@ -129,8 +127,7 @@ class SambertHifigan(Model):
                                         'voices.json')
         if os.path.exists(voices_json_path):
             os.remove(voices_json_path)
-        save_voices = {}
-        save_voices['voices'] = []
+        save_voices = {'voices': []}
         for k in self.voices.keys():
             save_voices['voices'].append(k)
         with open(voices_json_path, 'w', encoding='utf-8') as f:
@@ -168,22 +165,15 @@ class SambertHifigan(Model):
             allow_empty=True)
 
     def get_voice_audio_config_path(self, voice):
-        if voice not in self.voices:
-            return ''
-        return self.voices[voice].audio_config
+        return '' if voice not in self.voices else self.voices[voice].audio_config
 
     def get_voice_se_model_path(self, voice):
         if voice not in self.voices:
             return ''
-        if self.voices[voice].se_enable:
-            return self.voices[voice].se_model_path
-        else:
-            return ''
+        return self.voices[voice].se_model_path if self.voices[voice].se_enable else ''
 
     def get_voice_lang_path(self, voice):
-        if voice not in self.voices:
-            return ''
-        return self.voices[voice].lang_dir
+        return '' if voice not in self.voices else self.voices[voice].lang_dir
 
     def synthesis_one_sentences(self, voice_name, text):
         if voice_name not in self.voices:
@@ -261,9 +251,7 @@ class SambertHifigan(Model):
             logger.info('skip HIFIGAN training...')
 
     def forward(self, text: str, voice_name: str = None):
-        voice = self.default_voice_name
-        if voice_name is not None:
-            voice = voice_name
+        voice = voice_name if voice_name is not None else self.default_voice_name
         result = self.frontend.gen_tacotron_symbols(text)
         texts = [s for s in result.splitlines() if s != '']
         audio_total = np.empty((0), dtype='int16')

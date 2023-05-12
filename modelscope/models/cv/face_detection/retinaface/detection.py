@@ -39,7 +39,7 @@ class RetinaFaceDetection(TorchModel):
         return True
 
     def remove_prefix(self, state_dict, prefix):
-        new_state_dict = dict()
+        new_state_dict = {}
         for k, v in state_dict.items():
             if k.startswith(prefix):
                 new_state_dict[k[len(prefix):]] = v

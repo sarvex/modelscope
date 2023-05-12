@@ -115,9 +115,7 @@ class InceptionBlock3D(nn.Module):
             x2 = self.gating_b2(x2)
             x3 = self.gating_b3(x3)
 
-        out = torch.cat((x0, x1, x2, x3), 1)
-
-        return out
+        return torch.cat((x0, x1, x2, x3), 1)
 
 
 class SelfGating(nn.Module):

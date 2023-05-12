@@ -56,8 +56,7 @@ class LFPN(nn.Module):
         super(LFPN, self).__init__()
         self.out_dsfd_ft = out_dsfd_ft
         if self.out_dsfd_ft:
-            dsfd_module = []
-            dsfd_module.append(nn.Conv2d(256, 256, kernel_size=3, padding=1))
+            dsfd_module = [nn.Conv2d(256, 256, kernel_size=3, padding=1)]
             dsfd_module.append(nn.Conv2d(512, 256, kernel_size=3, padding=1))
             dsfd_module.append(nn.Conv2d(1024, 256, kernel_size=3, padding=1))
             dsfd_module.append(nn.Conv2d(2048, 256, kernel_size=3, padding=1))
@@ -115,8 +114,7 @@ class LFPN(nn.Module):
         c7 = self.c7_lat(c7)
 
         if self.out_dsfd_ft:
-            dsfd_fts = []
-            dsfd_fts.append(self.dsfd_modules[0](c2))
+            dsfd_fts = [self.dsfd_modules[0](c2)]
             dsfd_fts.append(self.dsfd_modules[1](c3))
             dsfd_fts.append(self.dsfd_modules[2](c4))
             dsfd_fts.append(self.dsfd_modules[3](feature_list[-1]))

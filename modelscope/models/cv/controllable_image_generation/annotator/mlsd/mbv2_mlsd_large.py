@@ -99,11 +99,7 @@ class ConvBNReLU(nn.Sequential):
         # padding = (kernel_size - 1) // 2
 
         # TFLite uses slightly different padding than PyTorch
-        if stride == 2:
-            padding = 0
-        else:
-            padding = (kernel_size - 1) // 2
-
+        padding = 0 if stride == 2 else (kernel_size - 1) // 2
         super(ConvBNReLU, self).__init__(
             nn.Conv2d(
                 in_planes,
@@ -153,10 +149,7 @@ class InvertedResidual(nn.Module):
         self.conv = nn.Sequential(*layers)
 
     def forward(self, x):
-        if self.use_res_connect:
-            return x + self.conv(x)
-        else:
-            return self.conv(x)
+        return x + self.conv(x) if self.use_res_connect else self.conv(x)
 
 
 class MobileNetV2(nn.Module):
@@ -192,11 +185,10 @@ class MobileNetV2(nn.Module):
         ]
 
         # only check the first element, assuming user knows t,c,n,s are required
-        if len(inverted_residual_setting) == 0 or len(
-                inverted_residual_setting[0]) != 4:
-            raise ValueError('inverted_residual_setting should be non-empty '
-                             'or a 4-element list, got {}'.format(
-                                 inverted_residual_setting))
+        if not inverted_residual_setting or len(inverted_residual_setting[0]) != 4:
+            raise ValueError(
+                f'inverted_residual_setting should be non-empty or a 4-element list, got {inverted_residual_setting}'
+            )
 
         # building first layer
         input_channel = _make_divisible(input_channel * width_mult,
@@ -251,11 +243,8 @@ class MobileNetV2(nn.Module):
     def _load_pretrained_model(self):
         pretrain_dict = model_zoo.load_url(
             'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth')
-        model_dict = {}
         state_dict = self.state_dict()
-        for k, v in pretrain_dict.items():
-            if k in state_dict:
-                model_dict[k] = v
+        model_dict = {k: v for k, v in pretrain_dict.items() if k in state_dict}
         state_dict.update(model_dict)
         self.load_state_dict(state_dict)
 

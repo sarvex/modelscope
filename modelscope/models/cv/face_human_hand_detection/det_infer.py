@@ -16,8 +16,8 @@ logger = get_logger()
 
 def load_model_weight(model_dir, device):
     checkpoint = torch.load(
-        '{}/{}'.format(model_dir, ModelFile.TORCH_MODEL_BIN_FILE),
-        map_location=device)
+        f'{model_dir}/{ModelFile.TORCH_MODEL_BIN_FILE}', map_location=device
+    )
     state_dict = checkpoint['state_dict'].copy()
     for k in checkpoint['state_dict']:
         if k.startswith('avg_model.'):
@@ -51,8 +51,7 @@ class NanoDetForFaceHumanHandDetection(TorchModel):
         self.model.to(self.device)
 
     def forward(self, x):
-        pred_result = self.model.inference(x)
-        return pred_result
+        return self.model.inference(x)
 
 
 def naive_collate(batch):
@@ -117,10 +116,8 @@ class_names = ['person', 'face', 'hand']
 
 def inference(model, device, img):
     img = img.cpu().numpy()
-    img_info = {'id': 0}
     height, width = img.shape[:2]
-    img_info['height'] = height
-    img_info['width'] = width
+    img_info = {'id': 0, 'height': height, 'width': width}
     meta = dict(img_info=img_info, raw_img=img, img=img)
 
     meta = img_process(meta, mean, std)

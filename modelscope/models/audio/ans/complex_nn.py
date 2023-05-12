@@ -124,8 +124,7 @@ class ComplexConv2d(nn.Module):
         """
         real = self.conv_re(x[..., 0]) - self.conv_im(x[..., 1])
         imaginary = self.conv_re(x[..., 1]) + self.conv_im(x[..., 0])
-        output = torch.stack((real, imaginary), dim=-1)
-        return output
+        return torch.stack((real, imaginary), dim=-1)
 
 
 class ComplexConvTranspose2d(nn.Module):
@@ -170,8 +169,7 @@ class ComplexConvTranspose2d(nn.Module):
     def forward(self, x):  # shpae of x : [batch,channel,axis1,axis2,2]
         real = self.tconv_re(x[..., 0]) - self.tconv_im(x[..., 1])
         imaginary = self.tconv_re(x[..., 1]) + self.tconv_im(x[..., 0])
-        output = torch.stack((real, imaginary), dim=-1)
-        return output
+        return torch.stack((real, imaginary), dim=-1)
 
 
 class ComplexBatchNorm2d(nn.Module):
@@ -202,5 +200,4 @@ class ComplexBatchNorm2d(nn.Module):
     def forward(self, x):
         real = self.bn_re(x[..., 0])
         imag = self.bn_im(x[..., 1])
-        output = torch.stack((real, imag), dim=-1)
-        return output
+        return torch.stack((real, imag), dim=-1)

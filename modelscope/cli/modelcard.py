@@ -110,17 +110,17 @@ class ModelCardCMD(CLICommand):
             if not attr.startswith('__')
         ]
         if self.args.visibility not in visibilities:
-            raise ValueError('The access_token must in %s!' % visibilities)
+            raise ValueError(f'The access_token must in {visibilities}!')
         licenses = [
             getattr(Licenses, attr) for attr in dir(Licenses)
             if not attr.startswith('__')
         ]
         if self.args.license not in licenses:
-            raise ValueError('The license must in %s!' % licenses)
+            raise ValueError(f'The license must in {licenses}!')
         try:
             self.api.get_model(self.model_id)
         except Exception as e:
-            logger.info('>>> %s' % type(e))
+            logger.info(f'>>> {type(e)}')
             self.api.create_model(
                 model_id=self.model_id,
                 visibility=self.args.visibility,
@@ -143,11 +143,10 @@ class ModelCardCMD(CLICommand):
             cfg_file = os.path.join(self.args.model_dir, 'README.md')
             if not os.path.exists(cfg_file):
                 with open(os.path.join(template_path,
-                                       tpl_dir)) as tpl_file_path:
+                                                   tpl_dir)) as tpl_file_path:
                     tpl = Template(tpl_file_path.read())
-                    f = open(cfg_file, 'w')
-                    f.write(tpl.substitute(model_id=self.model_id))
-                    f.close()
+                    with open(cfg_file, 'w') as f:
+                        f.write(tpl.substitute(model_id=self.model_id))
             self.api.push_model(
                 model_id=self.model_id,
                 model_dir=self.args.model_dir,
@@ -157,11 +156,13 @@ class ModelCardCMD(CLICommand):
         self.pprint()
 
     def pprint(self):
-        logger.info('>>> Clone the model_git < %s >, commit and push it.'
-                    % self.get_model_url())
-        logger.info('>>> Open the url < %s >, check and read it.' % self.url)
-        logger.info('>>> Visit the model_id < %s >, download and run it.'
-                    % self.model_id)
+        logger.info(
+            f'>>> Clone the model_git < {self.get_model_url()} >, commit and push it.'
+        )
+        logger.info(f'>>> Open the url < {self.url} >, check and read it.')
+        logger.info(
+            f'>>> Visit the model_id < {self.model_id} >, download and run it.'
+        )
 
     def execute(self):
         if self.args.action == 'create':

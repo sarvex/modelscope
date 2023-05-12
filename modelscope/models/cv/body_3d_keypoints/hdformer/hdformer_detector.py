@@ -66,9 +66,9 @@ class HDFormerDetector(TorchModel):
         Returns:
             Dict[str, Any]: canonical 2d points and root relative joints.
         """
-        if 'cuda' == input.device.type:
+        if input.device.type == 'cuda':
             input = input.data.cpu().numpy()
-        elif 'cpu' == input.device.type:
+        elif input.device.type == 'cpu':
             input = input.data.numpy()
         pose2d = input
         num_frames, num_joints, in_channels = pose2d.shape
@@ -90,7 +90,7 @@ class HDFormerDetector(TorchModel):
             n += self.window_size
         self.valid_length = n - self.window_size + receptive_field
 
-        if 0 == len(indices):
+        if not indices:
             logger.warn(
                 f'Fail to construct test sequences, total_frames = {num_frames}, \
                 while receptive_filed ={receptive_field}')
@@ -135,8 +135,7 @@ class HDFormerDetector(TorchModel):
         ]
         pre_flip[:, 0, :, :] *= -1
         pre_flip = pre_flip[:, :, :, left_right_symmetry]
-        pred_avg = (pre + pre_flip) / 2.
-        return pred_avg
+        return (pre + pre_flip) / 2.
 
     def forward(self, input: Dict[str, Any]) -> Dict[str, Any]:
         """3D human pose estimation.
@@ -159,20 +158,18 @@ class HDFormerDetector(TorchModel):
         vertex_pre = None
 
         if [] == inputs_2d:
-            predict_dict = {'success': False, KeypointsTypes.POSES_CAMERA: []}
-            return predict_dict
-
+            return {'success': False, KeypointsTypes.POSES_CAMERA: []}
         with torch.no_grad():
             for i, pose_2d in enumerate(inputs_2d):
                 pose_2d = pose_2d.unsqueeze(0).cuda(non_blocking=True) \
-                    if torch.cuda.is_available() else pose_2d.unsqueeze(0)
+                        if torch.cuda.is_available() else pose_2d.unsqueeze(0)
                 pose_2d_flip = inputs_2d_flip[i]
                 pose_2d_flip = pose_2d_flip.unsqueeze(0).cuda(non_blocking=True) \
-                    if torch.cuda.is_available() else pose_2d_flip.unsqueeze(0)
+                        if torch.cuda.is_available() else pose_2d_flip.unsqueeze(0)
                 mean_3d = mean_3d.unsqueeze(0).cuda(non_blocking=True) \
-                    if torch.cuda.is_available() else mean_3d.unsqueeze(0)
+                        if torch.cuda.is_available() else mean_3d.unsqueeze(0)
                 std_3d = std_3d.unsqueeze(0).cuda(non_blocking=True) \
-                    if torch.cuda.is_available() else std_3d.unsqueeze(0)
+                        if torch.cuda.is_available() else std_3d.unsqueeze(0)
 
                 vertex_pre = self.net(pose_2d, mean_3d, std_3d)
                 vertex_pre_flip = self.net(pose_2d_flip, mean_3d, std_3d)
@@ -191,6 +188,4 @@ class HDFormerDetector(TorchModel):
 
         preds_3d = preds_3d.unsqueeze(0)  # add batch dim
         preds_3d = preds_3d / self.cfg.model.INPUT.res_w  # Normalize to [-1, 1]
-        predict_dict = {'success': True, KeypointsTypes.POSES_CAMERA: preds_3d}
-
-        return predict_dict
+        return {'success': True, KeypointsTypes.POSES_CAMERA: preds_3d}

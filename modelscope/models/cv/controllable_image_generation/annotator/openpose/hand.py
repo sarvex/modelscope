@@ -36,8 +36,8 @@ class Hand(object):
         heatmap_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 22))
         # paf_avg = np.zeros((oriImg.shape[0], oriImg.shape[1], 38))
 
-        for m in range(len(multiplier)):
-            scale = multiplier[m]
+        for item in multiplier:
+            scale = item
             imageToTest = cv2.resize(
                 oriImg, (0, 0),
                 fx=scale,

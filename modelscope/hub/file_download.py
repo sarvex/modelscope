@@ -35,7 +35,7 @@ def model_file_download(
     user_agent: Union[Dict, str, None] = None,
     local_files_only: Optional[bool] = False,
     cookies: Optional[CookieJar] = None,
-) -> Optional[str]:  # pragma: no cover
+) -> Optional[str]:    # pragma: no cover
     """Download from a given URL and cache it if it's not already present in the local cache.
 
     Given a URL, this function looks for the corresponding file in the local
@@ -86,17 +86,16 @@ def model_file_download(
     # return the cached path
     if local_files_only:
         cached_file_path = cache.get_file_by_path(file_path)
-        if cached_file_path is not None:
-            logger.warning(
-                "File exists in local cache, but we're not sure it's up to date"
-            )
-            return cached_file_path
-        else:
+        if cached_file_path is None:
             raise ValueError(
                 'Cannot find the requested files in the cached path and outgoing'
                 ' traffic has been disabled. To enable model look-ups and downloads'
                 " online, set 'local_files_only' to False.")
 
+        logger.warning(
+            "File exists in local cache, but we're not sure it's up to date"
+        )
+        return cached_file_path
     _api = HubApi()
     headers = {
         'user-agent': ModelScopeConfig.get_user_agent(user_agent=user_agent, )
@@ -130,8 +129,7 @@ def model_file_download(
             break
 
     if file_to_download_info is None:
-        raise NotExistError('The file path: %s not exist in: %s' %
-                            (file_path, model_id))
+        raise NotExistError(f'The file path: {file_path} not exist in: {model_id}')
 
     # we need to download again
     url_to_download = get_file_download_url(model_id, file_path, revision)

@@ -57,16 +57,14 @@ class SbertForSequenceClassificationExporter(TorchModelExporter):
             preprocessor_mode=ModeKeys.TRAIN,
             task=Tasks.text_classification,
             **sequence_length)
-        if pair:
-            first_sequence = preprocessor.nlp_tokenizer.tokenizer.unk_token
-            second_sequence = preprocessor.nlp_tokenizer.tokenizer.unk_token
-        else:
-            first_sequence = preprocessor.nlp_tokenizer.tokenizer.unk_token
-            second_sequence = None
-
-        batched = []
-        for _ in range(batch_size):
-            batched.append(preprocessor((first_sequence, second_sequence)))
+        first_sequence = preprocessor.nlp_tokenizer.tokenizer.unk_token
+        second_sequence = (
+            preprocessor.nlp_tokenizer.tokenizer.unk_token if pair else None
+        )
+        batched = [
+            preprocessor((first_sequence, second_sequence))
+            for _ in range(batch_size)
+        ]
         return default_collate(batched)
 
     @property

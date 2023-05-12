@@ -49,7 +49,7 @@ class SequenceClassificationMetric(Metric):
         preds = np.concatenate(self.preds, axis=0)
         labels = np.concatenate(self.labels, axis=0)
         assert len(preds.shape) == 2, 'Only support predictions with shape: (batch_size, num_labels),' \
-                                      'multi-label classification is not supported in this metric class.'
+                                          'multi-label classification is not supported in this metric class.'
         preds_max = np.argmax(preds, axis=1)
         if preds.shape[1] > 2:
             metrics = {
@@ -61,7 +61,6 @@ class SequenceClassificationMetric(Metric):
             }
 
             metrics[MetricKeys.F1] = metrics[MetricKeys.Micro_F1]
-            return metrics
         else:
             metrics = {
                 MetricKeys.ACCURACY:
@@ -70,7 +69,8 @@ class SequenceClassificationMetric(Metric):
                 f1_score(labels, preds_max, average='binary'),
             }
             metrics[MetricKeys.F1] = metrics[MetricKeys.Binary_F1]
-            return metrics
+
+        return metrics
 
     def merge(self, other: 'SequenceClassificationMetric'):
         self.preds.extend(other.preds)

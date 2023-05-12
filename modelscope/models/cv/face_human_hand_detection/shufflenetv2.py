@@ -143,20 +143,19 @@ class ShuffleNetV2(nn.Module):
 
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
-        stage_names = ['stage{}'.format(i) for i in [2, 3, 4]]
+        stage_names = [f'stage{i}' for i in [2, 3, 4]]
         for name, repeats, output_channels in zip(
                 stage_names, self.stage_repeats, self._stage_out_channels[1:]):
             seq = [
                 ShuffleV2Block(
                     input_channels, output_channels, 2, activation=activation)
             ]
-            for i in range(repeats - 1):
-                seq.append(
-                    ShuffleV2Block(
-                        output_channels,
-                        output_channels,
-                        1,
-                        activation=activation))
+            seq.extend(
+                ShuffleV2Block(
+                    output_channels, output_channels, 1, activation=activation
+                )
+                for _ in range(repeats - 1)
+            )
             setattr(self, name, nn.Sequential(*seq))
             input_channels = output_channels
         output_channels = self._stage_out_channels[-1]
@@ -175,7 +174,7 @@ class ShuffleNetV2(nn.Module):
         output = []
 
         for i in range(2, 5):
-            stage = getattr(self, 'stage{}'.format(i))
+            stage = getattr(self, f'stage{i}')
             x = stage(x)
             if i in self.out_stages:
                 output.append(x)

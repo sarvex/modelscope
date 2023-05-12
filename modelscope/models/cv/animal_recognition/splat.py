@@ -41,28 +41,16 @@ class SplAtConv2d(Module):
         self.cardinality = groups
         self.channels = channels
         self.dropblock_prob = dropblock_prob
-        if self.rectify:
-            self.conv = Conv2d(
-                in_channels,
-                channels * radix,
-                kernel_size,
-                stride,
-                padding,
-                dilation,
-                groups=groups * radix,
-                bias=bias,
-                **kwargs)
-        else:
-            self.conv = Conv2d(
-                in_channels,
-                channels * radix,
-                kernel_size,
-                stride,
-                padding,
-                dilation,
-                groups=groups * radix,
-                bias=bias,
-                **kwargs)
+        self.conv = Conv2d(
+            in_channels,
+            channels * radix,
+            kernel_size,
+            stride,
+            padding,
+            dilation,
+            groups=groups * radix,
+            bias=bias,
+            **kwargs)
         self.use_bn = norm_layer is not None
         if self.use_bn:
             self.bn0 = norm_layer(channels * radix)
@@ -102,7 +90,7 @@ class SplAtConv2d(Module):
 
         if self.radix > 1:
             attens = torch.split(atten, rchannel // self.radix, dim=1)
-            out = sum([att * split for (att, split) in zip(attens, splited)])
+            out = sum(att * split for (att, split) in zip(attens, splited))
         else:
             out = atten * x
         return out.contiguous()

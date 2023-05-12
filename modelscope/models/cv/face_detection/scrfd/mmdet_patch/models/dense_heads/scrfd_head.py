@@ -142,31 +142,31 @@ class SCRFDHead(AnchorHead):
         self.loss_kps = build_loss(loss_kps)
         self.loss_kps_std = 1.0
         self.train_step = 0
-        self.pos_count = {}
         self.gtgroup_count = {}
-        for stride in self.anchor_generator.strides:
-            self.pos_count[stride[0]] = 0
+        self.pos_count = {stride[0]: 0 for stride in self.anchor_generator.strides}
 
     def _get_conv_module(self, in_channel, out_channel):
-        if not self.dw_conv:
-            conv = ConvModule(
+        return (
+            ConvModule(
                 in_channel,
                 out_channel,
                 3,
                 stride=1,
                 padding=1,
                 conv_cfg=self.conv_cfg,
-                norm_cfg=self.norm_cfg)
-        else:
-            conv = DepthwiseSeparableConvModule(
+                norm_cfg=self.norm_cfg,
+            )
+            if not self.dw_conv
+            else DepthwiseSeparableConvModule(
                 in_channel,
                 out_channel,
                 3,
                 stride=1,
                 padding=1,
                 pw_norm_cfg=self.norm_cfg,
-                dw_norm_cfg=self.norm_cfg)
-        return conv
+                dw_norm_cfg=self.norm_cfg,
+            )
+        )
 
     def _init_layers(self):
         """Initialize layers of the head."""
@@ -304,10 +304,7 @@ class SCRFDHead(AnchorHead):
         reg_pred_module = self.stride_reg[
             '0'] if self.strides_share else self.stride_reg[str(stride)]
         _bbox_pred = reg_pred_module(reg_feat)
-        if self.use_scale:
-            bbox_pred = scale(_bbox_pred)
-        else:
-            bbox_pred = _bbox_pred
+        bbox_pred = scale(_bbox_pred) if self.use_scale else _bbox_pred
         if self.use_kps:
             kps_pred_module = self.stride_kps[
                 '0'] if self.strides_share else self.stride_kps[str(stride)]
@@ -366,9 +363,8 @@ class SCRFDHead(AnchorHead):
         losses = self.loss(*loss_inputs, gt_bboxes_ignore=gt_bboxes_ignore)
         if proposal_cfg is None:
             return losses
-        else:
-            proposal_list = self.get_bboxes(*outs, img_metas, cfg=proposal_cfg)
-            return losses, proposal_list
+        proposal_list = self.get_bboxes(*outs, img_metas, cfg=proposal_cfg)
+        return losses, proposal_list
 
     def get_anchors(self, featmap_sizes, img_metas, device='cuda'):
         """Get anchors according to feature map sizes.
@@ -393,7 +389,7 @@ class SCRFDHead(AnchorHead):
 
         # for each image, we compute valid flags of multi level anchors
         valid_flag_list = []
-        for img_id, img_meta in enumerate(img_metas):
+        for img_meta in img_metas:
             multi_level_flags = self.anchor_generator.valid_flags(
                 featmap_sizes, img_meta['pad_shape'], device)
             valid_flag_list.append(multi_level_flags)
@@ -440,7 +436,6 @@ class SCRFDHead(AnchorHead):
             dict[str, Tensor]: A dictionary of loss components.
         """
         assert stride[0] == stride[1], 'h stride is not equal to w stride!'
-        use_qscore = True
         anchors = anchors.reshape(-1, 4)
         cls_score = cls_score.permute(0, 2, 3,
                                       1).reshape(-1, self.cls_out_channels)
@@ -490,6 +485,7 @@ class SCRFDHead(AnchorHead):
                 pos_decode_kps_targets = kps2distance(
                     pos_anchor_centers, pos_kps_targets / stride[0])
                 pos_decode_kps_pred = pos_kps_pred
+            use_qscore = True
             if use_qscore:
                 score[pos_inds] = bbox_overlaps(
                     pos_decode_bbox_pred.detach(),
@@ -707,7 +703,7 @@ class SCRFDHead(AnchorHead):
                     kps_preds[i][img_id].detach() for i in range(num_levels)
                 ]
             else:
-                kps_pred_list = [None for i in range(num_levels)]
+                kps_pred_list = [None for _ in range(num_levels)]
             img_shape = img_metas[img_id]['img_shape']
             scale_factor = img_metas[img_id]['scale_factor']
             if with_nms:
@@ -827,23 +823,23 @@ class SCRFDHead(AnchorHead):
         padding = mlvl_scores.new_zeros(mlvl_scores.shape[0], 1)
         mlvl_scores = torch.cat([mlvl_scores, padding], dim=1)
 
-        if with_nms:
-            det_bboxes, det_labels, det_kps = multiclass_nms(
-                mlvl_bboxes,
-                mlvl_scores,
-                cfg.score_thr,
-                cfg.nms,
-                cfg.max_per_img,
-                multi_kps=mlvl_kps)
-            if det_kps is not None:
-                return det_bboxes, det_labels, det_kps
-            else:
-                return det_bboxes, det_labels
+        if not with_nms:
+            return (
+                (mlvl_bboxes, mlvl_scores, mlvl_kps)
+                if mlvl_kps is not None
+                else (mlvl_bboxes, mlvl_scores)
+            )
+        det_bboxes, det_labels, det_kps = multiclass_nms(
+            mlvl_bboxes,
+            mlvl_scores,
+            cfg.score_thr,
+            cfg.nms,
+            cfg.max_per_img,
+            multi_kps=mlvl_kps)
+        if det_kps is not None:
+            return det_bboxes, det_labels, det_kps
         else:
-            if mlvl_kps is not None:
-                return mlvl_bboxes, mlvl_scores, mlvl_kps
-            else:
-                return mlvl_bboxes, mlvl_scores
+            return det_bboxes, det_labels
 
     def get_targets(self,
                     anchor_list,
@@ -896,11 +892,11 @@ class SCRFDHead(AnchorHead):
              label_channels=label_channels,
              unmap_outputs=unmap_outputs)
         # no valid anchors
-        if any([labels is None for labels in all_labels]):
+        if any(labels is None for labels in all_labels):
             return None
         # sampled anchors of all images
-        num_total_pos = sum([max(inds.numel(), 1) for inds in pos_inds_list])
-        num_total_neg = sum([max(inds.numel(), 1) for inds in neg_inds_list])
+        num_total_pos = sum(max(inds.numel(), 1) for inds in pos_inds_list)
+        num_total_neg = sum(max(inds.numel(), 1) for inds in neg_inds_list)
         # split targets to a list w.r.t. multiple levels
         anchors_list = images_to_levels(all_anchors, num_level_anchors)
         labels_list = images_to_levels(all_labels, num_level_anchors)
@@ -1047,10 +1043,7 @@ class SCRFDHead(AnchorHead):
 
     def get_num_level_anchors_inside(self, num_level_anchors, inside_flags):
         split_inside_flags = torch.split(inside_flags, num_level_anchors)
-        num_level_anchors_inside = [
-            int(flags.sum()) for flags in split_inside_flags
-        ]
-        return num_level_anchors_inside
+        return [int(flags.sum()) for flags in split_inside_flags]
 
     def aug_test(self, feats, img_metas, rescale=False):
         """Test function with test time augmentation.

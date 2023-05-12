@@ -31,9 +31,7 @@ def inference(image, model, face_model, score_thre=0.5, GPU=0):
     face, bbox = face_detection_PIL_v2(image, face_model)
     if bbox is None:
         logger.warning('no face detected!')
-        result = {'emotion_result': None, 'box': None}
-        return result
-
+        return {'emotion_result': None, 'box': None}
     face = transform_PIL(face)
     face = face.unsqueeze(0)
     if torch.cuda.is_available():
@@ -57,11 +55,8 @@ def inference(image, model, face_model, score_thre=0.5, GPU=0):
 
     au_ouput = au_ouput.int()
 
-    cur_au_list = []
-    for idx in range(au_ouput.shape[0]):
-        if au_ouput[idx] == 1:
-            au = index2AU[idx]
-            cur_au_list.append(au)
+    cur_au_list = [
+        index2AU[idx] for idx in range(au_ouput.shape[0]) if au_ouput[idx] == 1
+    ]
     cur_au_list.sort()
-    result = (cur_emotion, bbox)
-    return result
+    return cur_emotion, bbox

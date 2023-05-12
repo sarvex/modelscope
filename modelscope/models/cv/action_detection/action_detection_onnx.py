@@ -60,12 +60,11 @@ class ActionDetONNX(Model):
         bboxs[:, [1, 3]] *= scale_h
         bboxs[:, [0, 2]] = bboxs[:, [0, 2]].clip(0, width - 1)
         bboxs[:, [1, 3]] = bboxs[:, [1, 3]].clip(0, height - 1)
-        result = {
+        return {
             'boxes': bboxs.round().astype('int32').tolist(),
             'scores': det[1].tolist(),
-            'labels': [self.action_names[i] for i in det[2].tolist()]
+            'labels': [self.action_names[i] for i in det[2].tolist()],
         }
-        return result
 
     def parse_frames(self, frame_names):
         imgs = [cv2.imread(name)[:, :, ::-1] for name in frame_names]
@@ -80,11 +79,11 @@ class ActionDetONNX(Model):
             'height': np.asarray(h),
             'width': np.asarray(w)
         })
-        dets = self.post_nms(
+        return self.post_nms(
             pred,
             score_threshold=self.score_thresh,
-            nms_threshold=self.nms_threshold)
-        return dets
+            nms_threshold=self.nms_threshold,
+        )
 
     def forward_video(self, video_name, scale):
         min_size, max_size = self._get_sizes(scale)
@@ -104,8 +103,8 @@ class ActionDetONNX(Model):
                     cookies=None)
                 local_video_name = osp.join(temporary_cache_dir, random_str)
             cmd = f'ffmpeg -y -loglevel quiet -ss 0 -t {self.video_length_limit}' + \
-                  f' -i {local_video_name} -r {frame_rate} -f' + \
-                  f' image2 {temporary_cache_dir}/%06d_out.jpg'
+                      f' -i {local_video_name} -r {frame_rate} -f' + \
+                      f' image2 {temporary_cache_dir}/%06d_out.jpg'
             cmd = cmd.split(' ')
             subprocess.call(cmd)
 
@@ -138,11 +137,9 @@ class ActionDetONNX(Model):
             det = self.forward_img(imgs, h, w)
             det = self.resize_box(det[0], H, W, scale_h, scale_w)
             results.append(det)
-        results = [{
-            'timestamp': t,
-            'actions': res
-        } for t, res in zip(timestamp, results)]
-        return results
+        return [
+            {'timestamp': t, 'actions': res} for t, res in zip(timestamp, results)
+        ]
 
     def forward(self, video_name):
         return self.forward_video(video_name, scale=1)

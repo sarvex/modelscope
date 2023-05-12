@@ -251,11 +251,10 @@ class HDFormerNet(nn.Module):
         x: shape [B,C,T,V_v]
         """
         B, C, T, V = x_v.shape
-        # data normalization
         if self.data_bn is not None:
             if hasattr(self.cfg, 'PJN') and self.cfg.PJN:
                 x_v = self.data_bn(x_v.permute(0, 1, 3, 2).contiguous().view(B, -1, T)).view(B, C, V, T) \
-                    .contiguous().permute(0, 1, 3, 2)
+                        .contiguous().permute(0, 1, 3, 2)
             else:
                 x_v = self.data_bn(x_v)
 
@@ -265,7 +264,7 @@ class HDFormerNet(nn.Module):
         feature = []
         for idx, hoa_block in enumerate(self.downsample):
             x_v, x_e = hoa_block(x_v, x_e)
-            if idx == 0 or idx == 2 or idx == 4 or idx == 6:
+            if idx in [0, 2, 4, 6]:
                 feature.append((x_v, x_e))
 
         feature.append((x_v, x_e))
@@ -274,25 +273,22 @@ class HDFormerNet(nn.Module):
         x_v, x_e = feature[0]
         identity_feature = feature[1:]
 
-        ushape_feature = []
-        ushape_feature.append((x_v, x_e))
-        for idx, (hoa_block, id) in \
-                enumerate(zip(self.upsample, identity_feature)):
+        ushape_feature = [(x_v, x_e)]
+        for hoa_block, id in zip(self.upsample, identity_feature):
             x_v, x_e = hoa_block(x_v, x_e)
-            if hasattr(self.cfg, 'deterministic') and self.cfg.deterministic:
-                x_v = F.interpolate(x_v, scale_factor=(2, 1), mode='nearest')
-            else:
-                x_v = F.interpolate(
-                    x_v,
-                    scale_factor=(2, 1),
-                    mode='bilinear',
-                    align_corners=False)
+            x_v = (
+                F.interpolate(x_v, scale_factor=(2, 1), mode='nearest')
+                if hasattr(self.cfg, 'deterministic') and self.cfg.deterministic
+                else F.interpolate(
+                    x_v, scale_factor=(2, 1), mode='bilinear', align_corners=False
+                )
+            )
             x_v += id[0]
             ushape_feature.append((x_v, x_e))
 
         ushape_feature = ushape_feature[:-1]
         for idx, (hoa_block, u) in \
-                enumerate(zip(self.merge, ushape_feature)):
+                    enumerate(zip(self.merge, ushape_feature)):
             x_v2, x_e2 = hoa_block(*u)
             if hasattr(self.cfg, 'deterministic') and self.cfg.deterministic:
                 x_v += F.interpolate(

@@ -223,9 +223,7 @@ class FSMNBlock(nn.Module):
             out += y_right
 
         out_per = out.permute(0, 3, 2, 1)
-        output = out_per.squeeze(1)
-
-        return output
+        return out_per.squeeze(1)
 
     def to_kaldi_net(self):
         re_str = ''
@@ -320,9 +318,7 @@ class RectifiedLinear(nn.Module):
         self.dropout = nn.Dropout(0.1)
 
     def forward(self, input):
-        out = self.relu(input)
-        # out = self.dropout(out)
-        return out
+        return self.relu(input)
 
     def to_kaldi_net(self):
         re_str = ''
@@ -362,8 +358,9 @@ def _build_repeats(
             LinearTransform(linear_dim, proj_dim),
             FSMNBlock(proj_dim, proj_dim, lorder, rorder, 1, 1),
             AffineTransform(proj_dim, linear_dim),
-            RectifiedLinear(linear_dim, linear_dim))
-        for i in range(fsmn_layers)
+            RectifiedLinear(linear_dim, linear_dim),
+        )
+        for _ in range(fsmn_layers)
     ]
 
     return nn.Sequential(*repeats)
@@ -456,8 +453,7 @@ class FSMN(nn.Module):
         return x6, in_cache
 
     def to_kaldi_net(self):
-        re_str = ''
-        re_str += '<Nnet>\n'
+        re_str = '' + '<Nnet>\n'
         re_str += self.in_linear1.to_kaldi_net()
         re_str += self.in_linear2.to_kaldi_net()
         re_str += self.relu.to_kaldi_net()
@@ -512,10 +508,10 @@ if __name__ == '__main__':
     print(fsmn)
 
     num_params = sum(p.numel() for p in fsmn.parameters())
-    print('the number of model params: {}'.format(num_params))
+    print(f'the number of model params: {num_params}')
     x = torch.zeros(128, 200, 400)  # batch-size * time * dim
     y, _ = fsmn(x)  # batch-size * time * dim
-    print('input shape: {}'.format(x.shape))
-    print('output shape: {}'.format(y.shape))
+    print(f'input shape: {x.shape}')
+    print(f'output shape: {y.shape}')
 
     print(fsmn.to_kaldi_net())

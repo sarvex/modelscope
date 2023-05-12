@@ -100,9 +100,16 @@ class FSMNDecorator(TorchModel):
         classifier = None
         activation = None
 
-        kws_model = KWSModel(input_dim, output_dim, hidden_dim, global_cmvn,
-                             preprocessing, backbone, classifier, activation)
-        return kws_model
+        return KWSModel(
+            input_dim,
+            output_dim,
+            hidden_dim,
+            global_cmvn,
+            preprocessing,
+            backbone,
+            classifier,
+            activation,
+        )
 
 
 class KWSModel(nn.Module):

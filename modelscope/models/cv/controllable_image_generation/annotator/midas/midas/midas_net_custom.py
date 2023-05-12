@@ -34,7 +34,7 @@ class MidasNet_small(BaseModel):
 
         super(MidasNet_small, self).__init__()
 
-        use_pretrained = False if path else True
+        use_pretrained = not path
 
         self.channels_last = channels_last
         self.blocks = blocks

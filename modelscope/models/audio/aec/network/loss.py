@@ -131,11 +131,7 @@ def mask_loss_function(
         masks = masks * mask_for_loss
         targets = targets * mask_for_loss
 
-        if weight is None:
-            alpha = 1
-        else:  # for aec ST
-            alpha = weight - targets
-
+        alpha = 1 if weight is None else weight - targets
         if loss_type == 'mse':
             loss = 0.5 * torch.sum(alpha * torch.pow(targets - masks, 2))
         elif loss_type == 'mae':
@@ -334,10 +330,7 @@ def mask_loss_function(
         tgt_mr = tgt_mr * mask_for_loss
         tgt_mi = tgt_mi * mask_for_loss
 
-        if weight is None:
-            alpha = 1
-        else:
-            alpha = weight - tgt_mr
+        alpha = 1 if weight is None else weight - tgt_mr
         # signal approximation
         yr = mixed_spec[..., 0]
         yi = mixed_spec[..., 1]

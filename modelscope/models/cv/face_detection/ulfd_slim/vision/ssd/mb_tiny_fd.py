@@ -111,7 +111,7 @@ def create_mb_tiny_fd_predictor(net,
                                 nms_method=None,
                                 sigma=0.5,
                                 device=None):
-    predictor = Predictor(
+    return Predictor(
         net,
         config.image_size,
         config.image_mean_test,
@@ -120,5 +120,5 @@ def create_mb_tiny_fd_predictor(net,
         iou_threshold=config.iou_threshold,
         candidate_size=candidate_size,
         sigma=sigma,
-        device=device)
-    return predictor
+        device=device,
+    )

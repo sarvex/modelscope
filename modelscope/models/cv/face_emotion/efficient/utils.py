@@ -90,9 +90,7 @@ def round_repeats(repeats, global_params):
         new repeat: New repeat number after calculating.
     """
     multiplier = global_params.depth_coefficient
-    if not multiplier:
-        return repeats
-    return int(math.ceil(multiplier * repeats))
+    return repeats if not multiplier else int(math.ceil(multiplier * repeats))
 
 
 def drop_connect(inputs, p, training):
@@ -118,8 +116,7 @@ def drop_connect(inputs, p, training):
                                 device=inputs.device)
     binary_tensor = torch.floor(random_tensor)
 
-    output = inputs / keep_prob * binary_tensor
-    return output
+    return inputs / keep_prob * binary_tensor
 
 
 def get_width_and_height_from_size(x):
@@ -131,7 +128,7 @@ def get_width_and_height_from_size(x):
     """
     if isinstance(x, int):
         return x, x
-    if isinstance(x, list) or isinstance(x, tuple):
+    if isinstance(x, (list, tuple)):
         return x
     else:
         raise TypeError()
@@ -387,12 +384,12 @@ class BlockDecoder(object):
             'r%d' % block.num_repeat,
             'k%d' % block.kernel_size,
             's%d%d' % (block.strides[0], block.strides[1]),
-            'e%s' % block.expand_ratio,
+            f'e{block.expand_ratio}',
             'i%d' % block.input_filters,
-            'o%d' % block.output_filters
+            'o%d' % block.output_filters,
         ]
         if 0 < block.se_ratio <= 1:
-            args.append('se%s' % block.se_ratio)
+            args.append(f'se{block.se_ratio}')
         if block.id_skip is False:
             args.append('noskip')
         return '_'.join(args)
@@ -406,10 +403,10 @@ class BlockDecoder(object):
             blocks_args: A list of BlockArgs namedtuples of block args.
         """
         assert isinstance(string_list, list)
-        blocks_args = []
-        for block_string in string_list:
-            blocks_args.append(BlockDecoder._decode_block_string(block_string))
-        return blocks_args
+        return [
+            BlockDecoder._decode_block_string(block_string)
+            for block_string in string_list
+        ]
 
     @staticmethod
     def encode(blocks_args):
@@ -419,10 +416,7 @@ class BlockDecoder(object):
         Returns:
             block_strings: A list of strings, each string is a notation of block.
         """
-        block_strings = []
-        for block in blocks_args:
-            block_strings.append(BlockDecoder._encode_block_string(block))
-        return block_strings
+        return [BlockDecoder._encode_block_string(block) for block in blocks_args]
 
 
 def efficientnet_params(model_name):
@@ -502,16 +496,14 @@ def get_model_params(model_name, override_params):
     Returns:
         blocks_args, global_params
     """
-    if model_name.startswith('efficientnet'):
-        w, d, s, p = efficientnet_params(model_name)
-        blocks_args, global_params = efficientnet(
-            width_coefficient=w,
-            depth_coefficient=d,
-            dropout_rate=p,
-            image_size=s)
-    else:
-        raise NotImplementedError(
-            'model name is not pre-defined: {}'.format(model_name))
+    if not model_name.startswith('efficientnet'):
+        raise NotImplementedError(f'model name is not pre-defined: {model_name}')
+    w, d, s, p = efficientnet_params(model_name)
+    blocks_args, global_params = efficientnet(
+        width_coefficient=w,
+        depth_coefficient=d,
+        dropout_rate=p,
+        image_size=s)
     if override_params:
         global_params = global_params._replace(**override_params)
     return blocks_args, global_params
@@ -542,18 +534,20 @@ def load_pretrained_weights(model,
 
     if load_fc:
         ret = model.load_state_dict(state_dict, strict=False)
-        assert not ret.missing_keys, 'Missing keys when loading pretrained weights: {}'.format(
-            ret.missing_keys)
+        assert (
+            not ret.missing_keys
+        ), f'Missing keys when loading pretrained weights: {ret.missing_keys}'
     else:
         state_dict.pop('_fc.weight')
         state_dict.pop('_fc.bias')
         ret = model.load_state_dict(state_dict, strict=False)
-        assert set(ret.missing_keys) == set([
-            '_fc.weight', '_fc.bias'
-        ]), 'Missing keys when loading pretrained weights: {}'.format(
-            ret.missing_keys)
-    assert not ret.unexpected_keys, 'Missing keys when loading pretrained weights: {}'.format(
-        ret.unexpected_keys)
+        assert set(ret.missing_keys) == {
+            '_fc.weight',
+            '_fc.bias',
+        }, f'Missing keys when loading pretrained weights: {ret.missing_keys}'
+    assert (
+        not ret.unexpected_keys
+    ), f'Missing keys when loading pretrained weights: {ret.unexpected_keys}'
 
     if verbose:
-        print('Loaded pretrained weights for {}'.format(model_name))
+        print(f'Loaded pretrained weights for {model_name}')

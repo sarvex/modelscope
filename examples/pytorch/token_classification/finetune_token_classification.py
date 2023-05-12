@@ -57,9 +57,7 @@ class TokenClassificationArguments(TrainingArgs):
         unique_labels = set()
         for label in labels:
             unique_labels = unique_labels | set(label)
-        label_list = list(unique_labels)
-        label_list.sort()
-        return label_list
+        return sorted(unique_labels)
 
 
 args = TokenClassificationArguments.from_cli(task='token-classification')

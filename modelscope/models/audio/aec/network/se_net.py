@@ -44,7 +44,9 @@ class MaskNet(nn.Module):
                     hidden_dim2,
                     dilation=dilation,
                     layer_norm=layer_norm,
-                    dropout=dropout) for i in range(layers)
+                    dropout=dropout,
+                )
+                for _ in range(layers)
             ]
         else:
             repeats = [
@@ -55,18 +57,16 @@ class MaskNet(nn.Module):
                     rorder,
                     hidden_dim2,
                     layer_norm=layer_norm,
-                    dropout=dropout) for i in range(layers)
+                    dropout=dropout,
+                )
+                for _ in range(layers)
             ]
         self.deepfsmn = nn.Sequential(*repeats)
 
         self.linear2 = AffineTransform(hidden_dim, outdim)
 
         self.crm = crm
-        if self.crm:
-            self.sig = nn.Tanh()
-        else:
-            self.sig = Sigmoid(outdim, outdim)
-
+        self.sig = nn.Tanh() if self.crm else Sigmoid(outdim, outdim)
         self.vad = vad
         if self.vad:
             self.linear3 = AffineTransform(hidden_dim, 1)
@@ -84,11 +84,10 @@ class MaskNet(nn.Module):
             for i in range(ctl):
                 x2 = self.deepfsmn[i](x2)
             mask = self.sig(self.linear2(x2))
-            if self.vad:
-                vad = torch.sigmoid(self.linear3(x2))
-                return mask, vad
-            else:
+            if not self.vad:
                 return mask
+            vad = torch.sigmoid(self.linear3(x2))
+            return mask, vad
         x3 = self.deepfsmn(x2)
         if self.linearout:
             return self.linear2(x3)
@@ -100,8 +99,7 @@ class MaskNet(nn.Module):
             return mask
 
     def to_kaldi_nnet(self):
-        re_str = ''
-        re_str += '<Nnet>\n'
+        re_str = '' + '<Nnet>\n'
         re_str += self.linear1.to_kaldi_nnet()
         re_str += self.relu.to_kaldi_nnet()
         for dfsmn in self.deepfsmn:
@@ -140,7 +138,7 @@ class StageNet(nn.Module):
         self.stage2 = nn.ModuleList()
         layer = nn.Sequential(nn.Linear(indim, hidden_dim), nn.ReLU())
         self.stage1.append(layer)
-        for i in range(layers):
+        for _ in range(layers):
             layer = UniDeepFsmn(
                 hidden_dim,
                 hidden_dim,
@@ -154,7 +152,7 @@ class StageNet(nn.Module):
         # stage2
         layer = nn.Sequential(nn.Linear(321 + indim, hidden_dim), nn.ReLU())
         self.stage2.append(layer)
-        for i in range(layers2):
+        for _ in range(layers2):
             layer = UniDeepFsmn(
                 hidden_dim,
                 hidden_dim,
@@ -254,7 +252,7 @@ class Unet(nn.Module):
                     skip_connect=True))
             self.decoder.append(layer)
         self.tf = nn.ModuleList()
-        for i in range(layers - 2 * (len(dims) - 1)):
+        for _ in range(layers - 2 * (len(dims) - 1)):
             layer = nn.Sequential(
                 nn.Linear(dims[-1], dims[-1]), nn.ReLU(),
                 nn.Linear(dims[-1], dims[-1], bias=False),
@@ -288,9 +286,7 @@ class Unet(nn.Module):
             x = self.decoder[i](x)
 
         x = self.linear2(x)
-        if self.linearout:
-            return x
-        return self.act(x)
+        return x if self.linearout else self.act(x)
 
 
 class BranchNet(nn.Module):
@@ -319,7 +315,7 @@ class BranchNet(nn.Module):
         self.TIME = nn.ModuleList()
         self.br1 = nn.ModuleList()
         self.br2 = nn.ModuleList()
-        for i in range(layers):
+        for _ in range(layers):
             '''
             layer = nn.Sequential(
                 nn.Linear(hidden_dim, hidden_dim),
@@ -382,9 +378,7 @@ class BranchNet(nn.Module):
             z = self.FREQ[i](x)
             x = z + x
         x = self.linear2(x)
-        if self.linearout:
-            return x
-        return self.act(x)
+        return x if self.linearout else self.act(x)
 
 
 class TACNet(nn.Module):
@@ -409,19 +403,19 @@ class TACNet(nn.Module):
         if rorder == 0:
             repeats = [
                 UniDeepFsmn(hidden_dim, hidden_dim, lorder, hidden_dim)
-                for i in range(layers)
+                for _ in range(layers)
             ]
         else:
             repeats = [
                 DeepFsmn(hidden_dim, hidden_dim, lorder, rorder, hidden_dim)
-                for i in range(layers)
+                for _ in range(layers)
             ]
         self.deepfsmn = nn.Sequential(*repeats)
 
         self.ch_transform = nn.ModuleList([])
         self.ch_average = nn.ModuleList([])
         self.ch_concat = nn.ModuleList([])
-        for i in range(layers):
+        for _ in range(layers):
             self.ch_transform.append(
                 nn.Sequential(nn.Linear(hidden_dim, hidden_dim), nn.PReLU()))
             self.ch_average.append(
@@ -433,11 +427,7 @@ class TACNet(nn.Module):
         self.linear2 = AffineTransform(hidden_dim, outdim)
 
         self.crm = crm
-        if self.crm:
-            self.sig = nn.Tanh()
-        else:
-            self.sig = Sigmoid(outdim, outdim)
-
+        self.sig = nn.Tanh() if self.crm else Sigmoid(outdim, outdim)
         self.vad = vad
         if self.vad:
             self.linear3 = AffineTransform(hidden_dim, 1)
@@ -480,8 +470,7 @@ class TACNet(nn.Module):
 
         for c in range(ch):
             zlist[c] = self.sig(self.linear2(zlist[c]))
-        mask = torch.cat(zlist, dim=-1)
-        return mask
+        return torch.cat(zlist, dim=-1)
 
     def to_kaldi_nnet(self):
         pass

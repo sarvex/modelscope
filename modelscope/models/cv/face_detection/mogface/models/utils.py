@@ -65,19 +65,20 @@ class MogPriorBox(object):
                         cy = (i + 0.5) * stride
                         side_x = self.anchor_size_list[idx] * scale
                         side_y = self.anchor_size_list[idx] * scale
-                        for ratio in self.aspect_ratio_list:
-                            anchor_list.append([
-                                cx, cy, side_x / math.sqrt(ratio),
-                                side_y * math.sqrt(ratio)
-                            ])
-
+                        anchor_list.extend(
+                            [
+                                cx,
+                                cy,
+                                side_x / math.sqrt(ratio),
+                                side_y * math.sqrt(ratio),
+                            ]
+                            for ratio in self.aspect_ratio_list
+                        )
             final_anchor_list.append(anchor_list)
         final_anchor_arr = np.concatenate(final_anchor_list, axis=0)
         normalized_anchor_arr = normalize_anchor(final_anchor_arr).astype(
             'float32')
-        transformed_anchor = transform_anchor(normalized_anchor_arr)
-
-        return transformed_anchor
+        return transform_anchor(normalized_anchor_arr)
 
 
 class PriorBox(object):
@@ -208,5 +209,4 @@ def decode_landm(pre, priors, variances):
     c = priors[:, :2] + pre[:, 4:6] * variances[0] * priors[:, 2:]
     d = priors[:, :2] + pre[:, 6:8] * variances[0] * priors[:, 2:]
     e = priors[:, :2] + pre[:, 8:10] * variances[0] * priors[:, 2:]
-    landms = torch.cat((a, b, c, d, e), dim=1)
-    return landms
+    return torch.cat((a, b, c, d, e), dim=1)

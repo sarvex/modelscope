@@ -107,7 +107,7 @@ def video_merger(inputs):
     video_writer = cv2.VideoWriter(output_video_path, fourcc, inputs['fps'],
                                    (w, h))
 
-    for idx, frame in enumerate(out_images):
+    for frame in out_images:
         horizontal_border = int(base_crop_width * w / 1280)
         vertical_border = int(horizontal_border * h / w)
         new_frame = frame[vertical_border:-vertical_border,
@@ -164,13 +164,7 @@ def metrics(original_v, pred_v):
         # Match the descriptors
         matches = bf.knnMatch(descriptors1, descriptors1o, k=2)
 
-        # Select the good matches using the ratio test
-        goodMatches = []
-
-        for m, n in matches:
-            if m.distance < ratio * n.distance:
-                goodMatches.append(m)
-
+        goodMatches = [m for m, n in matches if m.distance < ratio * n.distance]
         if len(goodMatches) > MIN_MATCH_COUNT:
             # Get the good key points positions
             sourcePoints = np.float32([
@@ -209,12 +203,7 @@ def metrics(original_v, pred_v):
 
                 keyPoints2o, descriptors2o = sift.detectAndCompute(img2o, None)
                 matches = bf.knnMatch(descriptors1o, descriptors2o, k=2)
-                goodMatches = []
-
-                for m, n in matches:
-                    if m.distance < ratio * n.distance:
-                        goodMatches.append(m)
-
+                goodMatches = [m for m, n in matches if m.distance < ratio * n.distance]
                 if len(goodMatches) > MIN_MATCH_COUNT:
                     # Get the good key points positions
                     sourcePoints = np.float32([
@@ -234,7 +223,7 @@ def metrics(original_v, pred_v):
 
                 P_seq.append(np.matmul(Pt, M))
                 Pt = np.matmul(Pt, M)
-            # end
+                    # end
     # end
 
     if is_got_bad_item:

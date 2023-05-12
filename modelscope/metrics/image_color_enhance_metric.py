@@ -167,9 +167,7 @@ def calculate_psnr(img,
     img2 = img2.astype(np.float64)
 
     mse = np.mean((img - img2)**2)
-    if mse == 0:
-        return float('inf')
-    return 10. * np.log10(255. * 255. / mse)
+    return float('inf') if mse == 0 else 10. * np.log10(255. * 255. / mse)
 
 
 def calculate_ssim(img,
@@ -221,9 +219,7 @@ def calculate_ssim(img,
     img = img.astype(np.float64)
     img2 = img2.astype(np.float64)
 
-    ssims = []
-    for i in range(img.shape[2]):
-        ssims.append(_ssim(img[..., i], img2[..., i]))
+    ssims = [_ssim(img[..., i], img2[..., i]) for i in range(img.shape[2])]
     return np.array(ssims).mean()
 
 

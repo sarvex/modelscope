@@ -12,7 +12,7 @@ class FaceDetector:
 
     def __init__(self, dir):
 
-        self.model_path = dir + '/detector.pb'
+        self.model_path = f'{dir}/detector.pb'
         self.thres = 0.8
         self.input_shape = (512, 512, 3)
         self.pixel_means = np.array([123., 116., 103.])

@@ -44,8 +44,7 @@ class BadImageDetecting(TorchModel):
 
     def _train_forward(self, input: Tensor,
                        target: Tensor) -> Dict[str, Tensor]:
-        losses = dict()
-        return losses
+        return {}
 
     def _inference_forward(self, input: Tensor) -> Dict[str, Tensor]:
 

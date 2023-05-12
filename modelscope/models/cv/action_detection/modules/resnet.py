@@ -194,9 +194,9 @@ class ResNet3D(Backbone):
             # the 2x2 stride with a dilated convolution instead
             replace_stride_with_dilation = [False, False, False]
         if len(replace_stride_with_dilation) != 3:
-            raise ValueError('replace_stride_with_dilation should be None '
-                             'or a 3-element tuple, got {}'.format(
-                                 replace_stride_with_dilation))
+            raise ValueError(
+                f'replace_stride_with_dilation should be None or a 3-element tuple, got {replace_stride_with_dilation}'
+            )
         self.groups = groups
         self.base_width = width_per_group
         self.conv1 = nn.Conv3d(
@@ -272,20 +272,28 @@ class ResNet3D(Backbone):
                 norm_layer(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(
-            block(self.inplanes, planes, stride, ops[0], downsample,
-                  self.base_width, norm_layer))
+        layers = [
+            block(
+                self.inplanes,
+                planes,
+                stride,
+                ops[0],
+                downsample,
+                self.base_width,
+                norm_layer,
+            )
+        ]
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(
-                block(
-                    self.inplanes,
-                    planes,
-                    op=ops[i],
-                    base_width=self.base_width,
-                    norm_layer=norm_layer))
-
+        layers.extend(
+            block(
+                self.inplanes,
+                planes,
+                op=ops[i],
+                base_width=self.base_width,
+                norm_layer=norm_layer,
+            )
+            for i in range(1, blocks)
+        )
         return nn.Sequential(*layers)
 
     def features(self, x):
@@ -343,40 +351,44 @@ class ResNet3D(Backbone):
 
 
 def resnet101_3d(ops, t_stride, num_class, reduce_dim=0):
-    net = ResNet3D(
-        Bottleneck3D, [3, 4, 23, 3],
+    return ResNet3D(
+        Bottleneck3D,
+        [3, 4, 23, 3],
         ops=ops,
         t_stride=t_stride,
         num_classes=num_class,
-        reduce_dim=reduce_dim)
-    return net
+        reduce_dim=reduce_dim,
+    )
 
 
 def resnet50_3d(ops, t_stride, num_class, reduce_dim=0):
-    net = ResNet3D(
-        Bottleneck3D, [3, 4, 6, 3],
+    return ResNet3D(
+        Bottleneck3D,
+        [3, 4, 6, 3],
         ops=ops,
         t_stride=t_stride,
         num_classes=num_class,
-        reduce_dim=reduce_dim)
-    return net
+        reduce_dim=reduce_dim,
+    )
 
 
 def resnet34_3d(ops, t_stride, num_class, reduce_dim=0):
-    net = ResNet3D(
-        BasicBlock3D, [3, 4, 6, 3],
+    return ResNet3D(
+        BasicBlock3D,
+        [3, 4, 6, 3],
         ops=ops,
         t_stride=t_stride,
         num_classes=num_class,
-        reduce_dim=reduce_dim)
-    return net
+        reduce_dim=reduce_dim,
+    )
 
 
 def resnet18_3d(ops, t_stride, num_class, reduce_dim=0):
-    net = ResNet3D(
-        BasicBlock3D, [2, 2, 2, 2],
+    return ResNet3D(
+        BasicBlock3D,
+        [2, 2, 2, 2],
         ops=ops,
         t_stride=t_stride,
         num_classes=num_class,
-        reduce_dim=reduce_dim)
-    return net
+        reduce_dim=reduce_dim,
+    )

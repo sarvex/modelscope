@@ -67,8 +67,7 @@ class CustomSingleStageDetector(BaseDetector):
         See `mmdetection/tools/get_flops.py`
         """
         x = self.extract_feat(img)
-        outs = self.bbox_head(x)
-        return outs
+        return self.bbox_head(x)
 
     def forward_train(self,
                       img,
@@ -96,9 +95,9 @@ class CustomSingleStageDetector(BaseDetector):
         """
         super(CustomSingleStageDetector, self).forward_train(img, img_metas)
         x = self.extract_feat(img)
-        losses = self.bbox_head.forward_train(x, img_metas, gt_bboxes,
-                                              gt_labels, gt_bboxes_ignore)
-        return losses
+        return self.bbox_head.forward_train(
+            x, img_metas, gt_bboxes, gt_labels, gt_bboxes_ignore
+        )
 
     def simple_test(self, img, img_metas, rescale=False):
         """Test function without test time augmentation.
@@ -131,11 +130,10 @@ class CustomSingleStageDetector(BaseDetector):
         if torch.onnx.is_in_onnx_export():
             return bbox_list
 
-        bbox_results = [
+        return [
             bbox2result(det_bboxes, det_labels, self.bbox_head.num_classes)
             for det_bboxes, det_labels in bbox_list
         ]
-        return bbox_results
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test function with test time augmentation.

@@ -52,10 +52,7 @@ def check_local_model_is_latest(
         try:
             _, revisions = _api.get_model_branches_and_tags(
                 model_id=model_id, use_cookies=cookies)
-            if len(revisions) > 0:
-                latest_revision = revisions[0]
-            else:
-                latest_revision = 'master'
+            latest_revision = revisions[0] if len(revisions) > 0 else 'master'
         except:  # noqa: E722
             latest_revision = 'master'
 
@@ -70,24 +67,20 @@ def check_local_model_is_latest(
             if model_file['Type'] == 'tree':
                 continue
             # check model_file updated
-            if model_cache is not None:
-                if model_cache.exists(model_file):
-                    continue
-                else:
-                    logger.info(
-                        'Model is updated from modelscope hub, you can verify from https://www.modelscope.cn.'
-                    )
-                    break
-            else:
+            if model_cache is None:
                 if FILE_HASH in model_file:
                     local_file_hash = compute_hash(
                         os.path.join(model_root_path, model_file['Path']))
                     if local_file_hash == model_file[FILE_HASH]:
                         continue
-                    else:
-                        logger.info(
-                            'Model is updated from modelscope hub, you can verify from https://www.modelscope.cn.'
-                        )
-                        break
+                    logger.info(
+                        'Model is updated from modelscope hub, you can verify from https://www.modelscope.cn.'
+                    )
+                    break
+            elif not model_cache.exists(model_file):
+                logger.info(
+                    'Model is updated from modelscope hub, you can verify from https://www.modelscope.cn.'
+                )
+                break
     except:  # noqa: E722
         pass  # ignore

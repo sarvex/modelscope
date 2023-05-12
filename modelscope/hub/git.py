@@ -14,11 +14,10 @@ logger = get_logger()
 class Singleton(type):
     _instances = {}
 
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            cls._instances[cls] = super(Singleton,
-                                        cls).__call__(*args, **kwargs)
-        return cls._instances[cls]
+    def __call__(self, *args, **kwargs):
+        if self not in self._instances:
+            self._instances[self] = super(Singleton, self).__call__(*args, **kwargs)
+        return self._instances[self]
 
 
 class GitCommandWrapper(metaclass=Singleton):
@@ -62,23 +61,22 @@ class GitCommandWrapper(metaclass=Singleton):
                 logger.error(
                     'There are error run git command, you may need to login first.'
                 )
-                raise GitError('stdout: %s, stderr: %s' %
-                               (response.stdout.decode('utf8'),
-                                error.stderr.decode('utf8')))
+                raise GitError(
+                    f"stdout: {response.stdout.decode('utf8')}, stderr: {error.stderr.decode('utf8')}"
+                )
 
     def config_auth_token(self, repo_dir, auth_token):
         url = self.get_repo_remote_url(repo_dir)
         if '//oauth2' not in url:
             auth_url = self._add_token(auth_token, url)
-            cmd_args = '-C %s remote set-url origin %s' % (repo_dir, auth_url)
+            cmd_args = f'-C {repo_dir} remote set-url origin {auth_url}'
             cmd_args = cmd_args.split(' ')
             rsp = self._run_git_command(*cmd_args)
             logger.debug(rsp.stdout.decode('utf8'))
 
     def _add_token(self, token: str, url: str):
-        if token:
-            if '//oauth2' not in url:
-                url = url.replace('//', '//oauth2:%s@' % token)
+        if token and '//oauth2' not in url:
+            url = url.replace('//', f'//oauth2:{token}@')
         return url
 
     def remove_token_from_url(self, url: str):
@@ -125,10 +123,9 @@ class GitCommandWrapper(metaclass=Singleton):
         """
         url = self._add_token(token, url)
         if branch:
-            clone_args = '-C %s clone %s %s --branch %s' % (repo_base_dir, url,
-                                                            repo_name, branch)
+            clone_args = f'-C {repo_base_dir} clone {url} {repo_name} --branch {branch}'
         else:
-            clone_args = '-C %s clone %s' % (repo_base_dir, url)
+            clone_args = f'-C {repo_base_dir} clone {url}'
         logger.debug(clone_args)
         clone_args = clone_args.split(' ')
         response = self._run_git_command(*clone_args)
@@ -140,12 +137,14 @@ class GitCommandWrapper(metaclass=Singleton):
         user_name, user_email = ModelScopeConfig.get_user_info()
         if user_name and user_email:
             # config user.name and user.email if exist
-            config_user_name_args = '-C %s/%s config user.name %s' % (
-                repo_base_dir, repo_name, user_name)
+            config_user_name_args = (
+                f'-C {repo_base_dir}/{repo_name} config user.name {user_name}'
+            )
             response = self._run_git_command(*config_user_name_args.split(' '))
             logger.debug(response.stdout.decode('utf8'))
-            config_user_email_args = '-C %s/%s config user.email %s' % (
-                repo_base_dir, repo_name, user_email)
+            config_user_email_args = (
+                f'-C {repo_base_dir}/{repo_name} config user.email {user_email}'
+            )
             response = self._run_git_command(
                 *config_user_email_args.split(' '))
             logger.debug(response.stdout.decode('utf8'))
@@ -155,10 +154,10 @@ class GitCommandWrapper(metaclass=Singleton):
             files: List[str] = list(),
             all_files: bool = False):
         if all_files:
-            add_args = '-C %s add -A' % repo_dir
+            add_args = f'-C {repo_dir} add -A'
         elif len(files) > 0:
             files_str = ' '.join(files)
-            add_args = '-C %s add %s' % (repo_dir, files_str)
+            add_args = f'-C {repo_dir} add {files_str}'
         add_args = add_args.split(' ')
         rsp = self._run_git_command(*add_args)
         logger.debug(rsp.stdout.decode('utf8'))
@@ -174,21 +173,21 @@ class GitCommandWrapper(metaclass=Singleton):
         Returns:
             The command popen response.
         """
-        commit_args = ['-C', '%s' % repo_dir, 'commit', '-m', "'%s'" % message]
+        commit_args = ['-C', f'{repo_dir}', 'commit', '-m', f"'{message}'"]
         rsp = self._run_git_command(*commit_args)
         logger.info(rsp.stdout.decode('utf8'))
         return rsp
 
     def checkout(self, repo_dir: str, revision: str):
-        cmds = ['-C', '%s' % repo_dir, 'checkout', '%s' % revision]
+        cmds = ['-C', f'{repo_dir}', 'checkout', f'{revision}']
         return self._run_git_command(*cmds)
 
     def new_branch(self, repo_dir: str, revision: str):
-        cmds = ['-C', '%s' % repo_dir, 'checkout', '-b', revision]
+        cmds = ['-C', f'{repo_dir}', 'checkout', '-b', revision]
         return self._run_git_command(*cmds)
 
     def get_remote_branches(self, repo_dir: str):
-        cmds = ['-C', '%s' % repo_dir, 'branch', '-r']
+        cmds = ['-C', f'{repo_dir}', 'branch', '-r']
         rsp = self._run_git_command(*cmds)
         info = [
             line.strip()
@@ -212,8 +211,7 @@ class GitCommandWrapper(metaclass=Singleton):
              force: bool = False):
         url = self._add_token(token, url)
 
-        push_args = '-C %s push %s %s:%s' % (repo_dir, url, local_branch,
-                                             remote_branch)
+        push_args = f'-C {repo_dir} push {url} {local_branch}:{remote_branch}'
         if force:
             push_args += ' -f'
         push_args = push_args.split(' ')
@@ -222,32 +220,25 @@ class GitCommandWrapper(metaclass=Singleton):
         return rsp
 
     def get_repo_remote_url(self, repo_dir: str):
-        cmd_args = '-C %s config --get remote.origin.url' % repo_dir
+        cmd_args = f'-C {repo_dir} config --get remote.origin.url'
         cmd_args = cmd_args.split(' ')
         rsp = self._run_git_command(*cmd_args)
         url = rsp.stdout.decode('utf8')
         return url.strip()
 
     def list_lfs_files(self, repo_dir: str):
-        cmd_args = '-C %s lfs ls-files' % repo_dir
+        cmd_args = f'-C {repo_dir} lfs ls-files'
         cmd_args = cmd_args.split(' ')
         rsp = self._run_git_command(*cmd_args)
         out = rsp.stdout.decode('utf8').strip()
-        files = []
-        for line in out.split(os.linesep):
-            files.append(line.split(' ')[-1])
-
-        return files
+        return [line.split(' ')[-1] for line in out.split(os.linesep)]
 
     def tag(self,
             repo_dir: str,
             tag_name: str,
             message: str,
             ref: str = MASTER_MODEL_BRANCH):
-        cmd_args = [
-            '-C', repo_dir, 'tag', tag_name, '-m',
-            '"%s"' % message, ref
-        ]
+        cmd_args = ['-C', repo_dir, 'tag', tag_name, '-m', f'"{message}"', ref]
         rsp = self._run_git_command(*cmd_args)
         logger.debug(rsp.stdout.decode('utf8'))
         return rsp

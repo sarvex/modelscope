@@ -41,17 +41,16 @@ class FSMNSeleNetV2Decorator(TorchModel):
             new_config_file = os.path.join(self.tmp_dir.name, self.SC_CONFIG)
 
             self._sc = None
-            if os.path.exists(model_txt_file):
-                conf_dict = dict(mode=56542, kws_model=model_txt_file)
-                update_conf(sc_config_file, new_config_file, conf_dict)
-                import py_sound_connect
-                self._sc = py_sound_connect.SoundConnect(new_config_file)
-                self.size_in = self._sc.bytesPerBlockIn()
-                self.size_out = self._sc.bytesPerBlockOut()
-            else:
+            if not os.path.exists(model_txt_file):
                 raise Exception(
                     f'Invalid model directory! Failed to load model file: {model_txt_file}.'
                 )
+            conf_dict = dict(mode=56542, kws_model=model_txt_file)
+            update_conf(sc_config_file, new_config_file, conf_dict)
+            import py_sound_connect
+            self._sc = py_sound_connect.SoundConnect(new_config_file)
+            self.size_in = self._sc.bytesPerBlockIn()
+            self.size_out = self._sc.bytesPerBlockOut()
 
     def __del__(self):
         if hasattr(self, 'tmp_dir'):

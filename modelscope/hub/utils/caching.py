@@ -90,11 +90,7 @@ class FileSystemCache(object):
             self.save_cached_files()
 
     def exists(self, key):
-        for cache_file in self.cached_files:
-            if cache_file == key:
-                return True
-
-        return False
+        return any(cache_file == key for cache_file in self.cached_files)
 
     def clear_cache(self):
         """Remove all files and metadata from the cache
@@ -133,7 +129,7 @@ class ModelFileSystemCache(FileSystemCache):
             self.load_model_meta()
         else:
             super().__init__(os.path.join(cache_root, owner, name))
-            self.model_meta = {MODEL_META_MODEL_ID: '%s/%s' % (owner, name)}
+            self.model_meta = {MODEL_META_MODEL_ID: f'{owner}/{name}'}
             self.save_model_meta()
 
     def load_model_meta(self):
@@ -212,18 +208,16 @@ class ModelFileSystemCache(FileSystemCache):
                                          cached_file['Path'])
                 if os.path.exists(orig_path):
                     return orig_path
-                else:
-                    self.remove_key(cached_file)
-                    break
+                self.remove_key(cached_file)
+                break
 
         return None
 
     def __get_cache_key(self, model_file_info):
-        cache_key = {
+        return {
             'Path': model_file_info['Path'],
             'Revision': model_file_info['Revision'],  # commit id
         }
-        return cache_key
 
     def exists(self, model_file_info):
         """Check the file is cached or not.
@@ -235,13 +229,14 @@ class ModelFileSystemCache(FileSystemCache):
             bool: If exists return True otherwise False
         """
         key = self.__get_cache_key(model_file_info)
-        is_exists = False
-        for cached_key in self.cached_files:
-            if cached_key['Path'] == key['Path'] and (
-                    cached_key['Revision'].startswith(key['Revision'])
-                    or key['Revision'].startswith(cached_key['Revision'])):
-                is_exists = True
-                break
+        is_exists = any(
+            cached_key['Path'] == key['Path']
+            and (
+                cached_key['Revision'].startswith(key['Revision'])
+                or key['Revision'].startswith(cached_key['Revision'])
+            )
+            for cached_key in self.cached_files
+        )
         file_path = os.path.join(self.cache_root_location,
                                  model_file_info['Path'])
         if is_exists:

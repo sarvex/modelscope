@@ -21,7 +21,7 @@ class RetinaFaceDataset(CustomDataset):
 
     def _parse_ann_line(self, line):
         values = [float(x) for x in line.strip().split()]
-        bbox = np.array(values[0:4], dtype=np.float32)
+        bbox = np.array(values[:4], dtype=np.float32)
         kps = np.zeros((self.NK, 3), dtype=np.float32)
         ignore = False
         if self.min_size is not None:
@@ -41,9 +41,8 @@ class RetinaFaceDataset(CustomDataset):
                     else:
                         assert kps[li][2] >= 0
                         kps[li][2] = 1.0  # weight
-            else:  # len(values)==5
-                if not ignore:
-                    ignore = (values[4] == 1)
+            elif not ignore:
+                ignore = (values[4] == 1)
         else:
             assert self.test_mode
 
@@ -59,8 +58,8 @@ class RetinaFaceDataset(CustomDataset):
         Returns:
             list[dict]: Annotation info from COCO api.
         """
+        data_infos = []
         if isinstance(ann_file, list):
-            data_infos = []
             for line in ann_file:
                 name = line
                 objs = [0, 0, 0, 0]
@@ -83,9 +82,7 @@ class RetinaFaceDataset(CustomDataset):
                 assert name in bbox_map
                 bbox_map[name]['objs'].append(line)
             print('origin image size', len(bbox_map))
-            data_infos = []
-            for name in bbox_map:
-                item = bbox_map[name]
+            for name, item in bbox_map.items():
                 width = item['width']
                 height = item['height']
                 vals = item['objs']
@@ -95,10 +92,9 @@ class RetinaFaceDataset(CustomDataset):
                     if data is None:
                         continue
                     objs.append(data)  # data is (bbox, kps, cat)
-                if len(objs) == 0 and not self.test_mode:
-                    continue
-                data_infos.append(
-                    dict(filename=name, width=width, height=height, objs=objs))
+                if objs or self.test_mode:
+                    data_infos.append(
+                        dict(filename=name, width=width, height=height, objs=objs))
         return data_infos
 
     def get_ann_info(self, idx):
@@ -120,7 +116,6 @@ class RetinaFaceDataset(CustomDataset):
         for obj in data_info['objs']:
             label = self.cat2label[obj['cat']]
             bbox = obj['bbox']
-            keypoints = obj['kps']
             ignore = obj['ignore']
             if ignore:
                 bboxes_ignore.append(bbox)
@@ -128,6 +123,7 @@ class RetinaFaceDataset(CustomDataset):
             else:
                 bboxes.append(bbox)
                 labels.append(label)
+                keypoints = obj['kps']
                 keypointss.append(keypoints)
         if not bboxes:
             bboxes = np.zeros((0, 4))
@@ -144,10 +140,10 @@ class RetinaFaceDataset(CustomDataset):
         else:
             bboxes_ignore = np.array(bboxes_ignore, ndmin=2)
             labels_ignore = np.array(labels_ignore)
-        ann = dict(
+        return dict(
             bboxes=bboxes.astype(np.float32),
             labels=labels.astype(np.int64),
             keypointss=keypointss.astype(np.float32),
             bboxes_ignore=bboxes_ignore.astype(np.float32),
-            labels_ignore=labels_ignore.astype(np.int64))
-        return ann
+            labels_ignore=labels_ignore.astype(np.int64),
+        )

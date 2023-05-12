@@ -93,7 +93,7 @@ class PipelineCMD(CLICommand):
             tpl_file_path = os.path.join(template_path,
                                          self.args.tpl_file_path)
         if not os.path.exists(tpl_file_path):
-            raise ValueError('%s not exists!' % tpl_file_path)
+            raise ValueError(f'{tpl_file_path} not exists!')
 
         save_file_path = self.args.save_file_path if self.args.save_file_path != './' else os.getcwd(
         )
@@ -104,7 +104,7 @@ class PipelineCMD(CLICommand):
         save_pkl_path = os.path.join(save_file_path, save_file_name)
 
         if not self.args.configuration_path.endswith('/'):
-            self.args.configuration_path = self.args.configuration_path + '/'
+            self.args.configuration_path = f'{self.args.configuration_path}/'
 
         lines = []
         with open(tpl_file_path) as tpl_file:
@@ -114,11 +114,13 @@ class PipelineCMD(CLICommand):
         with open(save_pkl_path, 'w') as save_file:
             save_file.writelines(lines)
 
-        logger.info('>>> Configuration be saved in %s/%s' %
-                    (self.args.configuration_path, 'configuration.json'))
-        logger.info('>>> Task_name: %s, Created in %s' %
-                    (self.args.task_name, save_pkl_path))
-        logger.info('Open the file < %s >, update and run it.' % save_pkl_path)
+        logger.info(
+            f'>>> Configuration be saved in {self.args.configuration_path}/configuration.json'
+        )
+        logger.info(
+            f'>>> Task_name: {self.args.task_name}, Created in {save_pkl_path}'
+        )
+        logger.info(f'Open the file < {save_pkl_path} >, update and run it.')
 
     def execute(self):
         if self.args.action == 'create':

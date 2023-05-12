@@ -161,8 +161,9 @@ class ControlNet(TorchModel):
                 'c_concat': [control],
                 'c_crossattn': [
                     self.model.get_learned_conditioning(
-                        [prompt + ', ' + a_prompt] * num_samples)
-                ]
+                        [f'{prompt}, {a_prompt}'] * num_samples
+                    )
+                ],
             }
             un_cond = {
                 'c_concat':
@@ -207,7 +208,7 @@ class ControlNet(TorchModel):
                 iterations=1)
         elif self.init_control_type == 'normal':
             show_det_map = detected_map[:, :, ::-1]
-        elif self.init_control_type == 'fake_scribble' or self.init_control_type == 'scribble':
+        elif self.init_control_type in ['fake_scribble', 'scribble']:
             show_det_map = 255 - detected_map
         else:
             show_det_map = detected_map

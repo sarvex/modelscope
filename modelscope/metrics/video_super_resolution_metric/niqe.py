@@ -55,17 +55,15 @@ def compute_feature(block):
     Returns:
         list: Features with length of 18.
     """
-    feat = []
     alpha, beta_l, beta_r = estimate_aggd_param(block)
-    feat.extend([alpha, (beta_l + beta_r) / 2])
-
+    feat = [alpha, (beta_l + beta_r) / 2]
     # distortions disturb the fairly regular structure of natural images.
     # This deviation can be captured by analyzing the sample distribution of
     # the products of pairs of adjacent coefficients computed along
     # horizontal, vertical and diagonal orientations.
     shifts = [[0, 1], [1, 0], [1, 1], [1, -1]]
-    for i in range(len(shifts)):
-        shifted_block = np.roll(block, shifts[i], axis=(0, 1))
+    for shift in shifts:
+        shifted_block = np.roll(block, shift, axis=(0, 1))
         alpha, beta_l, beta_r = estimate_aggd_param(block * shifted_block)
         # Eq. 8
         mean = (beta_r - beta_l) * (gamma(2 / alpha) / gamma(1 / alpha))
@@ -205,6 +203,4 @@ def calculate_niqe(img,
     # round is necessary for being consistent with MATLAB's result
     img = img.round()
 
-    niqe_result = niqe(img, mu_pris_param, cov_pris_param, gaussian_window)
-
-    return niqe_result
+    return niqe(img, mu_pris_param, cov_pris_param, gaussian_window)

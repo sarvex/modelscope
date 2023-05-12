@@ -37,9 +37,7 @@ class TemporalModelBase(nn.Module):
         """
         Return the total receptive field of this model as # of frames.
         """
-        frames = 0
-        for f in self.pad:
-            frames += f
+        frames = sum(self.pad)
         return 1 + 2 * frames
 
     def total_causal_shift(self):
@@ -192,7 +190,7 @@ class TransCan3Dkeys(nn.Module):
     def _make_blocks(self):
         layers_conv = []
         layers_bn = []
-        for i in range(self.num_blocks):
+        for _ in range(self.num_blocks):
             layers_conv.append(
                 nn.Conv1d(
                     self.num_features,

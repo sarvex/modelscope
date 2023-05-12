@@ -9,7 +9,7 @@ from numpy.linalg import norm
 class MatlabCp2tormException(Exception):
 
     def __str__(self):
-        return 'In File {}:{}'.format(__file__, super.__str__(self))
+        return f'In File {__file__}:{super.__str__(self)}'
 
 
 def tformfwd(trans, uv):
@@ -55,8 +55,7 @@ def tforminv(trans, uv):
             each row is a pair of inverse-transformed coordinates (x, y)
     """
     Tinv = inv(trans)
-    xy = tformfwd(Tinv, uv)
-    return xy
+    return tformfwd(Tinv, uv)
 
 
 def findNonreflectiveSimilarity(uv, xy, options=None):
@@ -78,16 +77,11 @@ def findNonreflectiveSimilarity(uv, xy, options=None):
     u = uv[:, 0].reshape((-1, 1))  # use reshape to keep a column vector
     v = uv[:, 1].reshape((-1, 1))  # use reshape to keep a column vector
     U = np.vstack((u, v))
-    # print('--->U.shape: ', U.shape
-    # print('U:\n', U
-
-    # We know that X * r = U
-    if rank(X) >= 2 * K:
-        r, _, _, _ = lstsq(X, U)
-        r = np.squeeze(r)
-    else:
+    if rank(X) < 2 * K:
         raise Exception('cp2tform:twoUniquePointsReq')
 
+    r, _, _, _ = lstsq(X, U)
+    r = np.squeeze(r)
     # print('--->r:\n', r
 
     sc = r[0]
@@ -139,9 +133,8 @@ def findSimilarity(uv, xy, options=None):
 
     if norm1 <= norm2:
         return trans1, trans1_inv
-    else:
-        trans2_inv = inv(trans2)
-        return trans2, trans2_inv
+    trans2_inv = inv(trans2)
+    return trans2, trans2_inv
 
 
 def get_similarity_transform(src_pts, dst_pts, reflective=True):
@@ -207,9 +200,7 @@ def cvt_tform_mat_for_cv2(trans):
             transform matrix from src_pts to dst_pts, could be directly used
             for cv2.warpAffine()
     """
-    cv2_trans = trans[:, 0:2].T
-
-    return cv2_trans
+    return trans[:, 0:2].T
 
 
 def get_similarity_transform_for_cv2(src_pts, dst_pts, reflective=True):

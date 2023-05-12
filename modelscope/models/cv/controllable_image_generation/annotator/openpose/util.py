@@ -32,11 +32,10 @@ def padRightDownCorner(img, stride, padValue):
 
 # transfer caffe model to pytorch which will match the layer name
 def transfer(model, model_weights):
-    transfered_model_weights = {}
-    for weights_name in model.state_dict().keys():
-        transfered_model_weights[weights_name] = model_weights['.'.join(
-            weights_name.split('.')[1:])]
-    return transfered_model_weights
+    return {
+        weights_name: model_weights['.'.join(weights_name.split('.')[1:])]
+        for weights_name in model.state_dict().keys()
+    }
 
 
 # draw the body keypoint and lims
@@ -56,7 +55,7 @@ def draw_bodypose(canvas, candidate, subset):
             index = int(subset[n][i])
             if index == -1:
                 continue
-            x, y = candidate[index][0:2]
+            x, y = candidate[index][:2]
             cv2.circle(canvas, (int(x), int(y)), 4, colors[i], thickness=-1)
     for i in range(17):
         for n in range(len(subset)):
@@ -118,7 +117,7 @@ def handDetect(candidate, subset, oriImg):
     # left hand: wrist 7, elbow 6, shoulder 5
     ratioWristElbow = 0.33
     detect_result = []
-    image_height, image_width = oriImg.shape[0:2]
+    image_height, image_width = oriImg.shape[:2]
     for person in subset.astype(int):
         # if any of three not detected
         has_left = np.sum(person[[5, 6, 7]] == -1) == 0
@@ -162,10 +161,8 @@ def handDetect(candidate, subset, oriImg):
             x -= width / 2
             y -= width / 2  # width = height
             # overflow the image
-            if x < 0:
-                x = 0
-            if y < 0:
-                y = 0
+            x = max(x, 0)
+            y = max(y, 0)
             width1 = width
             width2 = width
             if x + width > image_width:

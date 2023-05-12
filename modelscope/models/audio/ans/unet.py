@@ -107,7 +107,7 @@ class UNet(nn.Module):
         self.fsmn_enc = []
         for i in range(self.model_length):
             fsmn_enc = complex_nn.ComplexUniDeepFsmn_L1(128, 128, 128)
-            self.add_module('fsmn_enc{}'.format(i), fsmn_enc)
+            self.add_module(f'fsmn_enc{i}', fsmn_enc)
             self.fsmn_enc.append(fsmn_enc)
             module = Encoder(
                 self.enc_channels[i],
@@ -117,17 +117,17 @@ class UNet(nn.Module):
                 padding=self.enc_paddings[i],
                 complex=complex,
                 padding_mode=padding_mode)
-            self.add_module('encoder{}'.format(i), module)
+            self.add_module(f'encoder{i}', module)
             self.encoders.append(module)
             se_layer_enc = SELayer(self.enc_channels[i + 1], 8)
-            self.add_module('se_layer_enc{}'.format(i), se_layer_enc)
+            self.add_module(f'se_layer_enc{i}', se_layer_enc)
             self.se_layers_enc.append(se_layer_enc)
         self.decoders = []
         self.fsmn_dec = []
         self.se_layers_dec = []
         for i in range(self.model_length):
             fsmn_dec = complex_nn.ComplexUniDeepFsmn_L1(128, 128, 128)
-            self.add_module('fsmn_dec{}'.format(i), fsmn_dec)
+            self.add_module(f'fsmn_dec{i}', fsmn_dec)
             self.fsmn_dec.append(fsmn_dec)
             module = Decoder(
                 self.dec_channels[i] * 2,
@@ -136,17 +136,13 @@ class UNet(nn.Module):
                 stride=self.dec_strides[i],
                 padding=self.dec_paddings[i],
                 complex=complex)
-            self.add_module('decoder{}'.format(i), module)
+            self.add_module(f'decoder{i}', module)
             self.decoders.append(module)
             if i < self.model_length - 1:
                 se_layer_dec = SELayer(self.dec_channels[i + 1], 8)
-                self.add_module('se_layer_dec{}'.format(i), se_layer_dec)
+                self.add_module(f'se_layer_dec{i}', se_layer_dec)
                 self.se_layers_dec.append(se_layer_dec)
-        if complex:
-            conv = complex_nn.ComplexConv2d
-        else:
-            conv = nn.Conv2d
-
+        conv = complex_nn.ComplexConv2d if complex else nn.Conv2d
         linear = conv(self.dec_channels[-1], 1, 1)
 
         self.add_module('linear', linear)
@@ -164,8 +160,7 @@ class UNet(nn.Module):
         x = inputs
         # go down
         xs = []
-        xs_se = []
-        xs_se.append(x)
+        xs_se = [x]
         for i, encoder in enumerate(self.encoders):
             xs.append(x)
             if i > 0:
@@ -186,9 +181,7 @@ class UNet(nn.Module):
                 p = self.se_layers_dec[i](p)
             p = torch.cat([p, xs_se[self.model_length - 1 - i]], dim=1)
 
-        # cmp_spec: [12, 1, 513, 64, 2]
-        cmp_spec = self.linear(p)
-        return cmp_spec
+        return self.linear(p)
 
     def set_size(self, model_complexity, model_depth=20, input_channels=1):
 
@@ -273,4 +266,4 @@ class UNet(nn.Module):
             self.dec_paddings = [(1, 1), (1, 0), (1, 1), (1, 0), (1, 1),
                                  (1, 0), (2, 1), (2, 1), (0, 3), (3, 0)]
         else:
-            raise ValueError('Unknown model depth : {}'.format(model_depth))
+            raise ValueError(f'Unknown model depth : {model_depth}')

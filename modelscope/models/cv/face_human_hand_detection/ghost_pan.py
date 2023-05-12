@@ -98,8 +98,7 @@ class GhostModule(nn.Module):
     def forward(self, x):
         x1 = self.primary_conv(x)
         x2 = self.cheap_operation(x1)
-        out = torch.cat([x1, x2], dim=1)
-        return out
+        return torch.cat([x1, x2], dim=1)
 
 
 class GhostBottleneck(nn.Module):
@@ -135,11 +134,7 @@ class GhostBottleneck(nn.Module):
             )
             self.bn_dw = nn.BatchNorm2d(mid_chs)
 
-        if has_se:
-            self.se = SqueezeExcite(mid_chs, se_ratio=se_ratio)
-        else:
-            self.se = None
-
+        self.se = SqueezeExcite(mid_chs, se_ratio=se_ratio) if has_se else None
         self.ghost2 = GhostModule(mid_chs, out_chs, activation=None)
 
         if in_chs == out_chs and self.stride == 1:
@@ -212,16 +207,16 @@ class GhostBlocks(nn.Module):
                 padding=0,
                 activation=activation,
             )
-        blocks = []
-        for _ in range(num_blocks):
-            blocks.append(
-                GhostBottleneck(
-                    in_channels,
-                    int(out_channels * expand),
-                    out_channels,
-                    dw_kernel_size=kernel_size,
-                    activation=activation,
-                ))
+        blocks = [
+            GhostBottleneck(
+                in_channels,
+                int(out_channels * expand),
+                out_channels,
+                dw_kernel_size=kernel_size,
+                activation=activation,
+            )
+            for _ in range(num_blocks)
+        ]
         self.blocks = nn.Sequential(*blocks)
 
     def forward(self, x):
@@ -289,7 +284,7 @@ class GhostPAN(nn.Module):
                     activation=activation,
                 ))
         self.top_down_blocks = nn.ModuleList()
-        for idx in range(len(in_channels) - 1, 0, -1):
+        for _ in range(len(in_channels) - 1, 0, -1):
             self.top_down_blocks.append(
                 GhostBlocks(
                     out_channels * 2,
@@ -304,7 +299,7 @@ class GhostPAN(nn.Module):
         # build bottom-up blocks
         self.downsamples = nn.ModuleList()
         self.bottom_up_blocks = nn.ModuleList()
-        for idx in range(len(in_channels) - 1):
+        for _ in range(len(in_channels) - 1):
             self.downsamples.append(
                 conv(
                     out_channels,
@@ -329,7 +324,7 @@ class GhostPAN(nn.Module):
         # extra layers
         self.extra_lvl_in_conv = nn.ModuleList()
         self.extra_lvl_out_conv = nn.ModuleList()
-        for i in range(num_extra_level):
+        for _ in range(num_extra_level):
             self.extra_lvl_in_conv.append(
                 conv(
                     out_channels,
@@ -388,8 +383,10 @@ class GhostPAN(nn.Module):
             outs.append(out)
 
         # extra layers
-        for extra_in_layer, extra_out_layer in zip(self.extra_lvl_in_conv,
-                                                   self.extra_lvl_out_conv):
-            outs.append(extra_in_layer(inputs[-1]) + extra_out_layer(outs[-1]))
-
+        outs.extend(
+            extra_in_layer(inputs[-1]) + extra_out_layer(outs[-1])
+            for extra_in_layer, extra_out_layer in zip(
+                self.extra_lvl_in_conv, self.extra_lvl_out_conv
+            )
+        )
         return tuple(outs)

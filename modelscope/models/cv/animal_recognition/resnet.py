@@ -83,17 +83,6 @@ class Bottleneck(nn.Module):
                 rectify_avg=rectify_avg,
                 norm_layer=norm_layer,
                 dropblock_prob=dropblock_prob)
-        elif rectified_conv:
-            self.conv2 = nn.Conv2d(
-                group_width,
-                group_width,
-                kernel_size=3,
-                stride=stride,
-                padding=dilation,
-                dilation=dilation,
-                groups=cardinality,
-                bias=False)
-            self.bn2 = norm_layer(group_width)
         else:
             self.conv2 = nn.Conv2d(
                 group_width,
@@ -105,7 +94,6 @@ class Bottleneck(nn.Module):
                 groups=cardinality,
                 bias=False)
             self.bn2 = norm_layer(group_width)
-
         self.conv3 = nn.Conv2d(
             group_width, planes * 4, kernel_size=1, bias=False)
         self.bn3 = norm_layer(planes * 4)
@@ -190,10 +178,7 @@ class ResNet(nn.Module):
         super(ResNet, self).__init__()
         self.rectified_conv = rectified_conv
         self.rectify_avg = rectify_avg
-        if rectified_conv:
-            conv_layer = nn.Conv2d
-        else:
-            conv_layer = nn.Conv2d
+        conv_layer = nn.Conv2d
         conv_kwargs = {'average_mode': rectify_avg} if rectified_conv else {}
         if deep_stem:
             self.conv1 = nn.Sequential(
@@ -349,7 +334,7 @@ class ResNet(nn.Module):
             downsample = nn.Sequential(*down_layers)
 
         layers = []
-        if dilation == 1 or dilation == 2:
+        if dilation in [1, 2]:
             layers.append(
                 block(
                     self.inplanes,
@@ -388,26 +373,27 @@ class ResNet(nn.Module):
                     dropblock_prob=dropblock_prob,
                     last_gamma=self.last_gamma))
         else:
-            raise RuntimeError('=> unknown dilation size: {}'.format(dilation))
+            raise RuntimeError(f'=> unknown dilation size: {dilation}')
 
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(
-                block(
-                    self.inplanes,
-                    planes,
-                    radix=self.radix,
-                    cardinality=self.cardinality,
-                    bottleneck_width=self.bottleneck_width,
-                    avd=self.avd,
-                    avd_first=self.avd_first,
-                    dilation=dilation,
-                    rectified_conv=self.rectified_conv,
-                    rectify_avg=self.rectify_avg,
-                    norm_layer=norm_layer,
-                    dropblock_prob=dropblock_prob,
-                    last_gamma=self.last_gamma))
-
+        layers.extend(
+            block(
+                self.inplanes,
+                planes,
+                radix=self.radix,
+                cardinality=self.cardinality,
+                bottleneck_width=self.bottleneck_width,
+                avd=self.avd,
+                avd_first=self.avd_first,
+                dilation=dilation,
+                rectified_conv=self.rectified_conv,
+                rectify_avg=self.rectify_avg,
+                norm_layer=norm_layer,
+                dropblock_prob=dropblock_prob,
+                last_gamma=self.last_gamma,
+            )
+            for _ in range(1, blocks)
+        )
         return nn.Sequential(*layers)
 
     def forward(self, x):

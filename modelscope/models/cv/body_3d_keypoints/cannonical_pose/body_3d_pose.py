@@ -67,11 +67,7 @@ class BodyKeypointsDetection3D(TorchModel):
 
         receptive_field = self.model_pos.receptive_field()
         self.pad = (receptive_field - 1) // 2
-        if self.cfg.model.MODEL.CAUSAL:
-            self.causal_shift = self.pad
-        else:
-            self.causal_shift = 0
-
+        self.causal_shift = self.pad if self.cfg.model.MODEL.CAUSAL else 0
         self.model_traj = TransCan3Dkeys(
             in_channels=self.cfg.model.MODEL.IN_NUM_JOINTS
             * self.cfg.model.MODEL.IN_2D_FEATURE,
@@ -119,9 +115,9 @@ class BodyKeypointsDetection3D(TorchModel):
         Returns:
             Dict[str, Any]: canonical 2d points and root relative joints.
         """
-        if 'cuda' == input.device.type:
+        if input.device.type == 'cuda':
             input = input.data.cpu().numpy()
-        elif 'cpu' == input.device.type:
+        elif input.device.type == 'cpu':
             input = input.data.numpy()
         pose2d = input
 
@@ -238,8 +234,7 @@ class BodyKeypointsDetection3D(TorchModel):
     def canonicalize_2Ds(self, pos2d, f, c):
         cs = np.array([c[0], c[1]]).reshape(1, 1, 2)
         fs = np.array([f[0], f[1]]).reshape(1, 1, 2)
-        canoical_2Ds = (pos2d - cs) / fs
-        return canoical_2Ds
+        return (pos2d - cs) / fs
 
     def normalize_screen_coordinates(self, X, w, h):
         assert X.shape[-1] == 2

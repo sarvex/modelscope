@@ -88,16 +88,14 @@ class DeepHead(nn.Module):
             x1 = F.relu(self.gn1(self.conv1(x)), inplace=True)
             x2 = F.relu(self.gn2(self.conv1(x1)), inplace=True)
             x3 = F.relu(self.gn3(self.conv1(x2)), inplace=True)
-            x4 = F.relu(self.gn4(self.conv1(x3)), inplace=True)
+            return F.relu(self.gn4(self.conv1(x3)), inplace=True)
         else:
             x1 = F.relu(self.conv1(x), inplace=True)
             x2 = F.relu(self.conv1(x1), inplace=True)
             if self.num_conv == 2:
                 return x2
             x3 = F.relu(self.conv1(x2), inplace=True)
-            x4 = F.relu(self.conv1(x3), inplace=True)
-
-        return x4
+            return F.relu(self.conv1(x3), inplace=True)
 
 
 class MogPredNet(nn.Module):
@@ -156,9 +154,6 @@ class MogPredNet(nn.Module):
         loc = torch.cat([o.view(o.size(0), -1, 4) for o in loc], 1)
         conf = torch.cat(
             [o.view(o.size(0), -1, self.num_classes) for o in conf], 1)
-        output = (
-            self.sigmoid(conf.view(conf.size(0), -1, self.num_classes)),
-            loc.view(loc.size(0), -1, 4),
-        )
-
-        return output
+        return self.sigmoid(
+            conf.view(conf.size(0), -1, self.num_classes)
+        ), loc.view(loc.size(0), -1, 4)

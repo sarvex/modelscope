@@ -122,10 +122,7 @@ def select_norm(norm, dim, shape):
         return GlobalLayerNorm(dim, shape, elementwise_affine=True)
     if norm == 'cln':
         return CumulativeLayerNorm(dim, elementwise_affine=True)
-    if norm == 'ln':
-        return nn.GroupNorm(1, dim, eps=1e-8)
-    else:
-        return nn.BatchNorm1d(dim)
+    return nn.GroupNorm(1, dim, eps=1e-8) if norm == 'ln' else nn.BatchNorm1d(dim)
 
 
 class Swish(nn.Module):

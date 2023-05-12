@@ -124,13 +124,12 @@ class CsanmtForTranslationExporter(TfModelExporter):
                 name='NmtModel/output_trans_result')
         }
 
-        for output_key in outputs:
-            tf.add_to_collection('inference_op', outputs[output_key])
+        for value in outputs.values():
+            tf.add_to_collection('inference_op', value)
 
-        output_node_names = ','.join([
-            '%s/%s' % ('NmtModel', output_key)
-            for output_key in outputs.keys()
-        ])
+        output_node_names = ','.join(
+            [f'NmtModel/{output_key}' for output_key in outputs]
+        )
         print(output_node_names)
         _ = freeze_graph.freeze_graph_with_def_protos(
             input_graph_def=tf.get_default_graph().as_graph_def(),

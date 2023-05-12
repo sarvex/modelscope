@@ -162,8 +162,7 @@ class HubApi:
             path, json=body, cookies=cookies, headers=self.headers)
         handle_http_post_error(r, path, body)
         raise_on_error(r.json())
-        model_repo_url = f'{get_endpoint()}/{model_id}'
-        return model_repo_url
+        return f'{get_endpoint()}/{model_id}'
 
     def delete_model(self, model_id: str):
         """Delete model_id from ModelScope.
@@ -294,7 +293,7 @@ class HubApi:
                 raise InvalidParameter(
                     'visibility and license cannot be empty if want to create new repo'
                 )
-            logger.info('Create new model %s' % model_id)
+            logger.info(f'Create new model {model_id}')
             self.create_model(
                 model_id=model_id,
                 visibility=visibility,
@@ -306,7 +305,7 @@ class HubApi:
             repo = Repository(model_dir=tmp_dir, clone_from=model_id)
             branches = git_wrapper.get_remote_branches(tmp_dir)
             if revision not in branches:
-                logger.info('Create new branch %s' % revision)
+                logger.info(f'Create new branch {revision}')
                 git_wrapper.new_branch(tmp_dir, revision)
             git_wrapper.checkout(tmp_dir, revision)
             files_in_repo = os.listdir(tmp_dir)
@@ -326,8 +325,7 @@ class HubApi:
                         shutil.copy(src, tmp_dir)
             if not commit_message:
                 date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-                commit_message = '[automsg] push model %s to hub at %s' % (
-                    model_id, date)
+                commit_message = f'[automsg] push model {model_id} to hub at {date}'
             repo.push(
                 commit_message=commit_message,
                 local_branch=revision,
@@ -364,11 +362,10 @@ class HubApi:
             headers=self.headers)
         handle_http_response(r, logger, cookies, 'list_model')
         if r.status_code == HTTPStatus.OK:
-            if is_ok(r.json()):
-                data = r.json()[API_RESPONSE_FIELD_DATA]
-                return data
-            else:
+            if not is_ok(r.json()):
                 raise RequestError(r.json()[API_RESPONSE_FIELD_MESSAGE])
+            data = r.json()[API_RESPONSE_FIELD_DATA]
+            return data
         else:
             raise_for_http_status(r)
         return None
@@ -411,10 +408,11 @@ class HubApi:
         d = r.json()
         raise_on_error(d)
         info = d[API_RESPONSE_FIELD_DATA]
-        # tags returned from backend are guaranteed to be ordered by create-time
-        tags = [x['Revision'] for x in info['RevisionMap']['Tags']
-                ] if info['RevisionMap']['Tags'] else []
-        return tags
+        return (
+            [x['Revision'] for x in info['RevisionMap']['Tags']]
+            if info['RevisionMap']['Tags']
+            else []
+        )
 
     def get_valid_revision(self,
                            model_id: str,
@@ -431,36 +429,34 @@ class HubApi:
             if revision is None:
                 revision = MASTER_MODEL_BRANCH
                 logger.info(
-                    'Model revision not specified, use default: %s in development mode'
-                    % revision)
-            if revision not in branches and revision not in tags:
-                raise NotExistError('The model: %s has no revision : %s .' % (model_id, revision))
-            logger.info('Development mode use revision: %s' % revision)
-        else:
-            if revision is None:  # user not specified revision, use latest revision before release time
-                revisions = self.list_model_revisions(
-                    model_id,
-                    cutoff_timestamp=release_timestamp,
-                    use_cookies=False if cookies is None else cookies)
-                if len(revisions) == 0:
-                    raise NoValidRevisionError(
-                        'The model: %s has no valid revision!' % model_id)
-                # tags (revisions) returned from backend are guaranteed to be ordered by create-time
-                # we shall obtain the latest revision created earlier than release version of this branch
-                revision = revisions[0]
-                logger.info(
-                    'Model revision not specified, use the latest revision: %s'
-                    % revision)
+                    f'Model revision not specified, use default: {revision} in development mode'
+                )
+            if revision in branches or revision in tags:
+                logger.info(f'Development mode use revision: {revision}')
             else:
-                # use user-specified revision
-                revisions = self.list_model_revisions(
-                    model_id,
-                    cutoff_timestamp=current_timestamp,
-                    use_cookies=False if cookies is None else cookies)
-                if revision not in revisions:
-                    raise NotExistError('The model: %s has no revision: %s !' %
-                                        (model_id, revision))
-                logger.info('Use user-specified model revision: %s' % revision)
+                raise NotExistError(f'The model: {model_id} has no revision : {revision} .')
+        elif revision is None:  # user not specified revision, use latest revision before release time
+            revisions = self.list_model_revisions(
+                model_id,
+                cutoff_timestamp=release_timestamp,
+                use_cookies=False if cookies is None else cookies)
+            if len(revisions) == 0:
+                raise NoValidRevisionError(f'The model: {model_id} has no valid revision!')
+            # tags (revisions) returned from backend are guaranteed to be ordered by create-time
+            # we shall obtain the latest revision created earlier than release version of this branch
+            revision = revisions[0]
+            logger.info(
+                f'Model revision not specified, use the latest revision: {revision}'
+            )
+        else:
+            # use user-specified revision
+            revisions = self.list_model_revisions(
+                model_id,
+                cutoff_timestamp=current_timestamp,
+                use_cookies=False if cookies is None else cookies)
+            if revision not in revisions:
+                raise NotExistError(f'The model: {model_id} has no revision: {revision} !')
+            logger.info(f'Use user-specified model revision: {revision}')
         return revision
 
     def get_model_branches_and_tags(
@@ -514,14 +510,12 @@ class HubApi:
             List[dict]: Model file list.
         """
         if revision:
-            path = '%s/api/v1/models/%s/repo/files?Revision=%s&Recursive=%s' % (
-                self.endpoint, model_id, revision, recursive)
+            path = f'{self.endpoint}/api/v1/models/{model_id}/repo/files?Revision={revision}&Recursive={recursive}'
         else:
-            path = '%s/api/v1/models/%s/repo/files?Recursive=%s' % (
-                self.endpoint, model_id, recursive)
+            path = f'{self.endpoint}/api/v1/models/{model_id}/repo/files?Recursive={recursive}'
         cookies = self._check_cookie(use_cookies)
         if root is not None:
-            path = path + f'&Root={root}'
+            path = f'{path}&Root={root}'
         headers = self.headers if headers is None else headers
         r = self.session.get(
             path, cookies=cookies, headers=headers)
@@ -530,13 +524,11 @@ class HubApi:
         d = r.json()
         raise_on_error(d)
 
-        files = []
-        for file in d[API_RESPONSE_FIELD_DATA]['Files']:
-            if file['Name'] == '.gitignore' or file['Name'] == '.gitattributes':
-                continue
-
-            files.append(file)
-        return files
+        return [
+            file
+            for file in d[API_RESPONSE_FIELD_DATA]['Files']
+            if file['Name'] not in ['.gitignore', '.gitattributes']
+        ]
 
     def list_datasets(self):
         path = f'{self.endpoint}/api/v1/datasets'
@@ -572,8 +564,7 @@ class HubApi:
                 f'The modelscope dataset [dataset_name = {dataset_name}, namespace = {namespace}, '
                 f'version = {revision}] dose not exist')
 
-        file_list = file_list['Files']
-        return file_list
+        return file_list['Files']
 
     def get_dataset_meta_files_local_paths(self, dataset_name: str,
                                            namespace: str,
@@ -585,8 +576,10 @@ class HubApi:
         cookies = ModelScopeConfig.get_cookies()
 
         # Dump the data_type as a local file
-        dataset_type_file_path = os.path.join(meta_cache_dir,
-                                              f'{str(dataset_type)}{DatasetFormations.formation_mark_ext.value}')
+        dataset_type_file_path = os.path.join(
+            meta_cache_dir,
+            f'{dataset_type}{DatasetFormations.formation_mark_ext.value}',
+        )
         with open(dataset_type_file_path, 'w') as fp:
             fp.write('*** Automatically-generated file, do not modify ***')
 
@@ -595,7 +588,7 @@ class HubApi:
             extension = os.path.splitext(file_path)[-1]
             if extension in dataset_meta_format:
                 datahub_url = f'{self.endpoint}/api/v1/datasets/{namespace}/{dataset_name}/repo?' \
-                              f'Revision={revision}&FilePath={file_path}'
+                                  f'Revision={revision}&FilePath={file_path}'
                 r = self.session.get(datahub_url, cookies=cookies)
                 raise_for_http_status(r)
                 local_path = os.path.join(meta_cache_dir, file_path)
@@ -682,7 +675,7 @@ class HubApi:
         resp_sts = r_sts.json()
         raise_on_error(resp_sts)
         data_sts = resp_sts['Data']
-        file_dir = visibility + '-unzipped' + '/' + namespace + '_' + dataset_name + '_' + zip_file_name
+        file_dir = f'{visibility}-unzipped/{namespace}_{dataset_name}_{zip_file_name}'
         data_sts['Dir'] = file_dir
         return data_sts
 
@@ -748,15 +741,12 @@ class HubApi:
                 download_count_resp = self.session.post(download_count_url, cookies=cookies, headers=self.headers)
                 raise_for_http_status(download_count_resp)
 
-                # Download uv
-                channel = DownloadChannel.LOCAL.value
-                user_name = ''
-                if MODELSCOPE_CLOUD_ENVIRONMENT in os.environ:
-                    channel = os.environ[MODELSCOPE_CLOUD_ENVIRONMENT]
-                if MODELSCOPE_CLOUD_USERNAME in os.environ:
-                    user_name = os.environ[MODELSCOPE_CLOUD_USERNAME]
+                channel = os.environ.get(
+                    MODELSCOPE_CLOUD_ENVIRONMENT, DownloadChannel.LOCAL.value
+                )
+                user_name = os.environ.get(MODELSCOPE_CLOUD_USERNAME, '')
                 download_uv_url = f'{self.endpoint}/api/v1/datasets/{namespace}/{dataset_name}/download/uv/' \
-                                  f'{channel}?user={user_name}'
+                                      f'{channel}?user={user_name}'
                 download_uv_resp = self.session.post(download_uv_url, cookies=cookies, headers=self.headers)
                 download_uv_resp = download_uv_resp.json()
                 raise_on_error(download_uv_resp)
@@ -807,9 +797,8 @@ class ModelScopeConfig:
         session_id = ''
         if os.path.exists(session_path):
             with open(session_path, 'rb') as f:
-                session_id = str(f.readline().strip(), encoding='utf-8')
-                return session_id
-        if session_id == '' or len(session_id) != 32:
+                return str(f.readline().strip(), encoding='utf-8')
+        if not session_id or len(session_id) != 32:
             session_id = str(uuid.uuid4().hex)
             ModelScopeConfig.make_sure_credential_path_exist()
             with open(session_path, 'w+') as wf:
@@ -829,9 +818,9 @@ class ModelScopeConfig:
     def save_user_info(user_name: str, user_email: str):
         ModelScopeConfig.make_sure_credential_path_exist()
         with open(
-                os.path.join(ModelScopeConfig.path_credential,
-                             ModelScopeConfig.USER_INFO_FILE_NAME), 'w+') as f:
-            f.write('%s:%s' % (user_name, user_email))
+                    os.path.join(ModelScopeConfig.path_credential,
+                                 ModelScopeConfig.USER_INFO_FILE_NAME), 'w+') as f:
+            f.write(f'{user_name}:{user_email}')
 
     @staticmethod
     def get_user_info() -> Tuple[str, str]:
@@ -880,26 +869,11 @@ class ModelScopeConfig:
             The formatted user-agent string.
         """
 
-        # include some more telemetrics when executing in dedicated
-        # cloud containers
-        env = 'custom'
-        if MODELSCOPE_CLOUD_ENVIRONMENT in os.environ:
-            env = os.environ[MODELSCOPE_CLOUD_ENVIRONMENT]
-        user_name = 'unknown'
-        if MODELSCOPE_CLOUD_USERNAME in os.environ:
-            user_name = os.environ[MODELSCOPE_CLOUD_USERNAME]
-
-        ua = 'modelscope/%s; python/%s; session_id/%s; platform/%s; processor/%s; env/%s; user/%s' % (
-            __version__,
-            platform.python_version(),
-            ModelScopeConfig.get_user_session_id(),
-            platform.platform(),
-            platform.processor(),
-            env,
-            user_name,
-        )
+        env = os.environ.get(MODELSCOPE_CLOUD_ENVIRONMENT, 'custom')
+        user_name = os.environ.get(MODELSCOPE_CLOUD_USERNAME, 'unknown')
+        ua = f'modelscope/{__version__}; python/{platform.python_version()}; session_id/{ModelScopeConfig.get_user_session_id()}; platform/{platform.platform()}; processor/{platform.processor()}; env/{env}; user/{user_name}'
         if isinstance(user_agent, dict):
             ua += '; ' + '; '.join(f'{k}/{v}' for k, v in user_agent.items())
         elif isinstance(user_agent, str):
-            ua += '; ' + user_agent
+            ua += f'; {user_agent}'
         return ua

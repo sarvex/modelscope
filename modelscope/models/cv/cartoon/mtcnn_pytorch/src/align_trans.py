@@ -24,7 +24,7 @@ global FACIAL_POINTS
 class FaceWarpException(Exception):
 
     def __str__(self):
-        return 'In File {}:{}'.format(__file__, super.__str__(self))
+        return f'In File {__file__}:{super.__str__(self)}'
 
 
 def get_reference_facial_points(output_size=None,
@@ -43,17 +43,16 @@ def get_reference_facial_points(output_size=None,
 
     h_crop = tmp_crop_size[0]
     w_crop = tmp_crop_size[1]
-    if (output_size):
-        if (output_size[0] == h_crop and output_size[1] == w_crop):
-            return tmp_5pts
+    if output_size and (output_size[0] == h_crop and output_size[1] == w_crop):
+        return tmp_5pts
 
     if (inner_padding_factor == 0 and outer_padding == (0, 0)):
         if output_size is None:
             return tmp_5pts
         else:
             raise FaceWarpException(
-                'No paddings to do, output_size must be None or {}'.format(
-                    tmp_crop_size))
+                f'No paddings to do, output_size must be None or {tmp_crop_size}'
+            )
 
     # check output size
     if not (0 <= inner_padding_factor <= 1.0):
@@ -90,10 +89,7 @@ def get_reference_facial_points(output_size=None,
     scale_factor = size_bf_outer_pad[0].astype(np.float32) / tmp_crop_size[0]
     tmp_5pts = tmp_5pts * scale_factor
 
-    # 3) add outer_padding to make output_size
-    reference_5point = tmp_5pts + np.array(outer_padding)
-
-    return reference_5point
+    return tmp_5pts + np.array(outer_padding)
 
 
 def get_affine_transform_matrix(src_pts, dst_pts):
@@ -179,7 +175,4 @@ def warp_and_crop_face(src_img,
         tfm, (crop_size[0], crop_size[1]),
         borderValue=(255, 255, 255))
 
-    if return_trans_inv:
-        return face_img, tfm_inv
-    else:
-        return face_img
+    return (face_img, tfm_inv) if return_trans_inv else face_img

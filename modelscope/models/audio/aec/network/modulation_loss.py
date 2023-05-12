@@ -122,9 +122,7 @@ class ModulationDomainNCCLossModule(torch.nn.Module):
                 normalized_enhanced * normalized_enhanced, dim=2))**.5
 
         ncc = inner_product / normalized_denom
-        mod_mse_loss = torch.mean((ncc - 1.0)**2)
-
-        return mod_mse_loss
+        return torch.mean((ncc - 1.0)**2)
 
 
 class GaborSTRFConv(nn.Module):
@@ -236,15 +234,13 @@ class GaborSTRFConv(nn.Module):
         if len(sigspec.shape) == 2:  # expand batch dimension if single eg
             sigspec = sigspec.unsqueeze(0)
         strfs = self.strfs().unsqueeze(1).type_as(sigspec)
-        out = F.conv2d(sigspec.unsqueeze(1), strfs, padding=self.padding)
-        return out
+        return F.conv2d(sigspec.unsqueeze(1), strfs, padding=self.padding)
 
     def __repr__(self):
         """Gabor filter"""
-        report = """
+        return """
             +++++ Gabor Filter Kernels [{}], supn[{}], supk[{}] real only [{}] norm strf [{}] +++++
 
-        """.format(self.numKern, self.numN, self.numK, self.real_only,
-                   self.norm_strf)
-
-        return report
+        """.format(
+            self.numKern, self.numN, self.numK, self.real_only, self.norm_strf
+        )

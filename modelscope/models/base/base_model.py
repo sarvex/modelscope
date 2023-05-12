@@ -112,7 +112,7 @@ class Model(ABC):
                     'Expecting model is pre-fetched locally, but is not found.'
                 )
 
-            invoked_by = '%s/%s' % (Invoke.KEY, invoked_by)
+            invoked_by = f'{Invoke.KEY}/{invoked_by}'
             local_model_dir = snapshot_download(
                 model_name_or_path, revision, user_agent=invoked_by)
         logger.info(f'initialize model from {local_model_dir}')
@@ -121,9 +121,7 @@ class Model(ABC):
         else:
             cfg = Config.from_file(
                 osp.join(local_model_dir, ModelFile.CONFIGURATION))
-        task_name = cfg.task
-        if 'task' in kwargs:
-            task_name = kwargs.pop('task')
+        task_name = kwargs.pop('task') if 'task' in kwargs else cfg.task
         model_cfg = cfg.model
         if hasattr(model_cfg, 'model_type') and not hasattr(model_cfg, 'type'):
             model_cfg.type = model_cfg.model_type

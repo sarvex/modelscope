@@ -123,18 +123,15 @@ class HighResolutionModule(nn.Module):
     def _check_branches(self, num_branches, blocks, num_blocks, num_inchannels,
                         num_channels):
         if num_branches != len(num_blocks):
-            error_msg = 'NUM_BRANCHES({}) <> NUM_BLOCKS({})'.format(
-                num_branches, len(num_blocks))
+            error_msg = f'NUM_BRANCHES({num_branches}) <> NUM_BLOCKS({len(num_blocks)})'
             raise ValueError(error_msg)
 
         if num_branches != len(num_channels):
-            error_msg = 'NUM_BRANCHES({}) <> NUM_CHANNELS({})'.format(
-                num_branches, len(num_channels))
+            error_msg = f'NUM_BRANCHES({num_branches}) <> NUM_CHANNELS({len(num_channels)})'
             raise ValueError(error_msg)
 
         if num_branches != len(num_inchannels):
-            error_msg = 'NUM_BRANCHES({}) <> NUM_INCHANNELS({})'.format(
-                num_branches, len(num_inchannels))
+            error_msg = f'NUM_BRANCHES({num_branches}) <> NUM_INCHANNELS({len(num_inchannels)})'
             raise ValueError(error_msg)
 
     def _make_one_branch(self,
@@ -145,7 +142,7 @@ class HighResolutionModule(nn.Module):
                          stride=1):
         downsample = None
         if stride != 1 or \
-           self.num_inchannels[branch_index] != num_channels[branch_index] * block.expansion:
+               self.num_inchannels[branch_index] != num_channels[branch_index] * block.expansion:
             downsample = nn.Sequential(
                 nn.Conv2d(
                     self.num_inchannels[branch_index],
@@ -157,26 +154,27 @@ class HighResolutionModule(nn.Module):
                     num_channels[branch_index] * block.expansion,
                     momentum=BN_MOMENTUM),
             )
-        layers = []
-        layers.append(
-            block(self.num_inchannels[branch_index],
-                  num_channels[branch_index], stride, downsample))
+        layers = [
+            block(
+                self.num_inchannels[branch_index],
+                num_channels[branch_index],
+                stride,
+                downsample,
+            )
+        ]
         self.num_inchannels[branch_index] = \
-            num_channels[branch_index] * block.expansion
-        for i in range(1, num_blocks[branch_index]):
-            layers.append(
-                block(self.num_inchannels[branch_index],
-                      num_channels[branch_index]))
-
+                num_channels[branch_index] * block.expansion
+        layers.extend(
+            block(self.num_inchannels[branch_index], num_channels[branch_index])
+            for _ in range(1, num_blocks[branch_index])
+        )
         return nn.Sequential(*layers)
 
     def _make_branches(self, num_branches, block, num_blocks, num_channels):
-        branches = []
-
-        for i in range(num_branches):
-            branches.append(
-                self._make_one_branch(i, block, num_blocks, num_channels))
-
+        branches = [
+            self._make_one_branch(i, block, num_blocks, num_channels)
+            for i in range(num_branches)
+        ]
         return nn.ModuleList(branches)
 
     def _make_fuse_layers(self):
@@ -223,14 +221,17 @@ class HighResolutionModule(nn.Module):
                             conv3x3s.append(
                                 nn.Sequential(
                                     nn.Conv2d(
-                                        num_inchannels[j],
+                                        num_outchannels_conv3x3,
                                         num_outchannels_conv3x3,
                                         3,
                                         2,
                                         1,
-                                        bias=False),
+                                        bias=False,
+                                    ),
                                     nn.BatchNorm2d(num_outchannels_conv3x3),
-                                    nn.ReLU(True)))
+                                    nn.ReLU(True),
+                                )
+                            )
                     fuse_layer.append(nn.Sequential(*conv3x3s))
             fuse_layers.append(nn.ModuleList(fuse_layer))
 
@@ -251,10 +252,7 @@ class HighResolutionModule(nn.Module):
         for i in range(len(self.fuse_layers)):
             y = x[0] if i == 0 else self.fuse_layers[i][0](x[0])
             for j in range(1, self.num_branches):
-                if i == j:
-                    y = y + x[j]
-                else:
-                    y = y + self.fuse_layers[i][j](x[j])
+                y = y + x[j] if i == j else y + self.fuse_layers[i][j](x[j])
             x_fuse.append(self.relu(y))
 
         return x_fuse

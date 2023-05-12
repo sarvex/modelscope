@@ -81,15 +81,17 @@ def create_window_3d(window_size, channel=1, device=None):
     _1D_window = gaussian(window_size, 1.5).unsqueeze(1)
     _2D_window = _1D_window.mm(_1D_window.t())
     _3D_window = _2D_window.unsqueeze(2) @ (_1D_window.t())
-    window = _3D_window.expand(1, channel, window_size, window_size,
-                               window_size).contiguous().to(device)
-    return window
+    return (
+        _3D_window.expand(1, channel, window_size, window_size, window_size)
+        .contiguous()
+        .to(device)
+    )
 
 
 def calculate_psnr(img1, img2):
-    psnr = -10 * math.log10(
-        torch.mean((img1[0] - img2[0]) * (img1[0] - img2[0])).cpu().data)
-    return psnr
+    return -10 * math.log10(
+        torch.mean((img1[0] - img2[0]) * (img1[0] - img2[0])).cpu().data
+    )
 
 
 def calculate_ssim(img1,
@@ -101,15 +103,8 @@ def calculate_ssim(img1,
                    val_range=None):
     # Value range can be different from 255. Other common ranges are 1 (sigmoid) and 2 (tanh).
     if val_range is None:
-        if torch.max(img1) > 128:
-            max_val = 255
-        else:
-            max_val = 1
-
-        if torch.min(img1) < -0.5:
-            min_val = -1
-        else:
-            min_val = 0
+        max_val = 255 if torch.max(img1) > 128 else 1
+        min_val = -1 if torch.min(img1) < -0.5 else 0
         L = max_val - min_val
     else:
         L = val_range
@@ -165,14 +160,8 @@ def calculate_ssim(img1,
 
     ssim_map = ((2 * mu1_mu2 + C1) * v1) / ((mu1_sq + mu2_sq + C1) * v2)
 
-    if size_average:
-        ret = ssim_map.mean()
-    else:
-        ret = ssim_map.mean(1).mean(1).mean(1)
-
-    if full:
-        return ret, cs
-    return ret.cpu()
+    ret = ssim_map.mean() if size_average else ssim_map.mean(1).mean(1).mean(1)
+    return (ret, cs) if full else ret.cpu()
 
 
 def calculate_lpips(img1, img2, loss_fn_alex):

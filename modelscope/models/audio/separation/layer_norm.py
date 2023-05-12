@@ -21,8 +21,7 @@ class CLayerNorm(nn.LayerNorm):
             sample: [batch_size, channels, length]
         """
         if sample.dim() != 3:
-            raise RuntimeError('{} only accept 3-D tensor as input'.format(
-                self.__name__))
+            raise RuntimeError(f'{self.__name__} only accept 3-D tensor as input')
         # [N, C, T] -> [N, T, C]
         sample = torch.transpose(sample, 1, 2)
         # LayerNorm
@@ -54,8 +53,7 @@ class GLayerNorm(nn.Module):
             sample: [batch_size, channels, length]
         """
         if sample.dim() != 3:
-            raise RuntimeError('{} only accept 3-D tensor as input'.format(
-                self.__name__))
+            raise RuntimeError(f'{self.__name__} only accept 3-D tensor as input')
         # [N, C, T] -> [N, T, C]
         sample = torch.transpose(sample, 1, 2)
         # Mean and variance [N, 1, 1]

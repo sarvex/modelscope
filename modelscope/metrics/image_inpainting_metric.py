@@ -41,7 +41,7 @@ def calculate_frechet_distance(activations_pred, activations_target, eps=1e-6):
         # if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-3):
         if not np.allclose(np.diagonal(covmean).imag, 0, atol=1e-2):
             m = np.max(np.abs(covmean.imag))
-            raise ValueError('Imaginary component {}'.format(m))
+            raise ValueError(f'Imaginary component {m}')
         covmean = covmean.real
 
     tr_covmean = np.trace(covmean)
@@ -169,12 +169,9 @@ class SSIM(torch.nn.Module):
         C2 = 0.03**2
 
         ssim_map = ((2 * mu1_mu2 + C1) * (2 * sigma12 + C2)) / \
-                   ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
+                       ((mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2))
 
-        if size_average:
-            return ssim_map.mean()
-
-        return ssim_map.mean(1).mean(1).mean(1)
+        return ssim_map.mean() if size_average else ssim_map.mean(1).mean(1).mean(1)
 
     def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
                               missing_keys, unexpected_keys, error_msgs):

@@ -28,11 +28,11 @@ class Skeleton:
         """
         Remove the joints specified in 'joints_to_remove'.
         """
-        valid_joints = []
-        for joint in range(len(self._parents)):
-            if joint not in joints_to_remove:
-                valid_joints.append(joint)
-
+        valid_joints = [
+            joint
+            for joint in range(len(self._parents))
+            if joint not in joints_to_remove
+        ]
         for i in range(len(self._parents)):
             while self._parents[i] in joints_to_remove:
                 self._parents[i] = self._parents[self._parents[i]]
@@ -47,16 +47,18 @@ class Skeleton:
         self._parents = np.array(new_parents)
 
         if self._joints_left is not None:
-            new_joints_left = []
-            for joint in self._joints_left:
-                if joint in valid_joints:
-                    new_joints_left.append(joint - index_offsets[joint])
+            new_joints_left = [
+                joint - index_offsets[joint]
+                for joint in self._joints_left
+                if joint in valid_joints
+            ]
             self._joints_left = new_joints_left
         if self._joints_right is not None:
-            new_joints_right = []
-            for joint in self._joints_right:
-                if joint in valid_joints:
-                    new_joints_right.append(joint - index_offsets[joint])
+            new_joints_right = [
+                joint - index_offsets[joint]
+                for joint in self._joints_right
+                if joint in valid_joints
+            ]
             self._joints_right = new_joints_right
 
         self._compute_metadata()
@@ -71,13 +73,12 @@ class Skeleton:
 
     def _compute_metadata(self):
         self._has_children = np.zeros(len(self._parents)).astype(bool)
-        for i, parent in enumerate(self._parents):
+        for parent in self._parents:
             if parent != -1:
                 self._has_children[parent] = True
 
         self._children = []
-        for i, parent in enumerate(self._parents):
-            self._children.append([])
+        self._children.extend([] for _ in self._parents)
         for i, parent in enumerate(self._parents):
             if parent != -1:
                 self._children[parent].append(i)

@@ -102,19 +102,19 @@ class RetinaFace(nn.Module):
 
     def _make_class_head(self, fpn_num=3, inchannels=64, anchor_num=2):
         classhead = nn.ModuleList()
-        for i in range(fpn_num):
+        for _ in range(fpn_num):
             classhead.append(ClassHead(inchannels, anchor_num))
         return classhead
 
     def _make_bbox_head(self, fpn_num=3, inchannels=64, anchor_num=2):
         bboxhead = nn.ModuleList()
-        for i in range(fpn_num):
+        for _ in range(fpn_num):
             bboxhead.append(BboxHead(inchannels, anchor_num))
         return bboxhead
 
     def _make_landmark_head(self, fpn_num=3, inchannels=64, anchor_num=2):
         landmarkhead = nn.ModuleList()
-        for i in range(fpn_num):
+        for _ in range(fpn_num):
             landmarkhead.append(LandmarkHead(inchannels, anchor_num))
         return landmarkhead
 
@@ -140,6 +140,8 @@ class RetinaFace(nn.Module):
             [self.LandmarkHead[i](feat) for i, feat in enumerate(features)],
             dim=1)
 
-        output = (bbox_regressions, F.softmax(classifications,
-                                              dim=-1), ldm_regressions)
-        return output
+        return (
+            bbox_regressions,
+            F.softmax(classifications, dim=-1),
+            ldm_regressions,
+        )

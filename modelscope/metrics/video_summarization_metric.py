@@ -40,10 +40,7 @@ def evaluate_summary(predicted_summary, user_summary, eval_method):
             f_score = 2 * precision * recall * 100 / (precision + recall)
             f_scores.append(f_score)
 
-    if eval_method == 'max':
-        return max(f_scores)
-    else:
-        return sum(f_scores) / len(f_scores)
+    return max(f_scores) if eval_method == 'max' else sum(f_scores) / len(f_scores)
 
 
 def calculate_f_score(outputs: Dict, inputs: Dict):
@@ -54,8 +51,7 @@ def calculate_f_score(outputs: Dict, inputs: Dict):
     n_frames = inputs['n_frames'].cpu().numpy()[0]
     positions = inputs['positions'].cpu().numpy()[0]
     summary = generate_summary([sb], [scores], [n_frames], [positions])[0]
-    f_score = evaluate_summary(summary, user_summary, 'avg')
-    return f_score
+    return evaluate_summary(summary, user_summary, 'avg')
 
 
 @METRICS.register_module(

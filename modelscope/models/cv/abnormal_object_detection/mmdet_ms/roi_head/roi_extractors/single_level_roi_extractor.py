@@ -82,15 +82,9 @@ class SingleRoINExtractor(BaseRoIExtractor):
             roi_feats.requires_grad = True
 
         if num_levels == 1:
-            if len(rois) == 0:
-                return roi_feats
-            return self.roi_layers[0](feats[0], rois)
-
+            return roi_feats if len(rois) == 0 else self.roi_layers[0](feats[0], rois)
         if self.gc_context:
-            context = []
-            for feat in feats:
-                context.append(self.pool(feat))
-
+            context = [self.pool(feat) for feat in feats]
         batch_size = feats[0].shape[0]
         target_lvls = self.map_roi_levels(rois, num_levels)
 

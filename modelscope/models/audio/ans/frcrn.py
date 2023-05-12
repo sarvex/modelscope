@@ -54,7 +54,7 @@ class FRCRNDecorator(TorchModel):
         if 'clean' in inputs:
             mix_result = self.model.loss(
                 inputs['noisy'], inputs['clean'], result_list, mode='Mix')
-            output.update(mix_result)
+            output |= mix_result
             sisnr_result = self.model.loss(
                 inputs['noisy'], inputs['clean'], result_list, mode='SiSNR')
             output.update(sisnr_result)
@@ -129,7 +129,6 @@ class FRCRN(nn.Module):
             padding_mode=padding_mode)
 
     def forward(self, inputs):
-        out_list = []
         # [B, D*2, T]
         cmp_spec = self.stft(inputs)
         # [B, 1, D*2, T]
@@ -150,14 +149,10 @@ class FRCRN(nn.Module):
         unet2_out = self.unet2(unet1_out)
         cmp_mask2 = torch.tanh(unet2_out)
         est_spec, est_wav, est_mask = self.apply_mask(cmp_spec, cmp_mask1)
-        out_list.append(est_spec)
-        out_list.append(est_wav)
-        out_list.append(est_mask)
+        out_list = [est_spec, est_wav, est_mask]
         cmp_mask2 = cmp_mask2 + cmp_mask1
         est_spec, est_wav, est_mask = self.apply_mask(cmp_spec, cmp_mask2)
-        out_list.append(est_spec)
-        out_list.append(est_wav)
-        out_list.append(est_mask)
+        out_list.extend((est_spec, est_wav, est_mask))
         return out_list
 
     def apply_mask(self, cmp_spec, cmp_mask):
@@ -183,25 +178,27 @@ class FRCRN(nn.Module):
                 biases += [param]
             else:
                 weights += [param]
-        params = [{
-            'params': weights,
-            'weight_decay': weight_decay,
-        }, {
-            'params': biases,
-            'weight_decay': 0.0,
-        }]
-        return params
+        return [
+            {
+                'params': weights,
+                'weight_decay': weight_decay,
+            },
+            {
+                'params': biases,
+                'weight_decay': 0.0,
+            },
+        ]
 
     def loss(self, noisy, labels, out_list, mode='Mix'):
         if mode == 'SiSNR':
             count = 0
             while count < len(out_list):
                 est_spec = out_list[count]
-                count = count + 1
+                count += 1
                 est_wav = out_list[count]
-                count = count + 1
+                count += 1
                 est_mask = out_list[count]
-                count = count + 1
+                count += 1
                 if count != 3:
                     loss = self.loss_1layer(noisy, est_spec, est_wav, labels,
                                             est_mask, mode)
@@ -211,11 +208,11 @@ class FRCRN(nn.Module):
             count = 0
             while count < len(out_list):
                 est_spec = out_list[count]
-                count = count + 1
+                count += 1
                 est_wav = out_list[count]
-                count = count + 1
+                count += 1
                 est_mask = out_list[count]
-                count = count + 1
+                count += 1
                 if count != 3:
                     amp_loss, phase_loss, SiSNR_loss = self.loss_1layer(
                         noisy, est_spec, est_wav, labels, est_mask, mode)
@@ -265,8 +262,7 @@ class FRCRN(nn.Module):
 
 
 def l2_norm(s1, s2):
-    norm = torch.sum(s1 * s2, -1, keepdim=True)
-    return norm
+    return torch.sum(s1 * s2, -1, keepdim=True)
 
 
 def si_snr(s1, s2, eps=1e-8):

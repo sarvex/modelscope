@@ -53,7 +53,7 @@ def printNeonMatrix(w):
         for j in range(numcols):
             print(f32ToI32(w[i, j]))
 
-        for j in range(numnecols * 4 - numcols):
+        for _ in range(numnecols * 4 - numcols):
             print(0)
 
 
@@ -67,7 +67,7 @@ def printNeonVector(b):
     for i in range(size):
         print(f32ToI32(b[i]))
 
-    for i in range(nesize * 4 - size):
+    for _ in range(nesize * 4 - size):
         print(0)
 
 

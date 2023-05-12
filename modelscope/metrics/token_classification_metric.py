@@ -73,22 +73,21 @@ class TokenClassificationMetric(Metric):
 
         results = self._compute(
             predictions=true_predictions, references=true_labels)
-        if self.return_entity_level_metrics:
-            final_results = {}
-            for key, value in results.items():
-                if isinstance(value, dict):
-                    for n, v in value.items():
-                        final_results[f'{key}_{n}'] = v
-                else:
-                    final_results[key] = value
-            return final_results
-        else:
+        if not self.return_entity_level_metrics:
             return {
                 MetricKeys.PRECISION: results[MetricKeys.PRECISION],
                 MetricKeys.RECALL: results[MetricKeys.RECALL],
                 MetricKeys.F1: results[MetricKeys.F1],
                 MetricKeys.ACCURACY: results[MetricKeys.ACCURACY],
             }
+        final_results = {}
+        for key, value in results.items():
+            if isinstance(value, dict):
+                for n, v in value.items():
+                    final_results[f'{key}_{n}'] = v
+            else:
+                final_results[key] = value
+        return final_results
 
     def merge(self, other: 'TokenClassificationMetric'):
         self.preds.extend(other.preds)

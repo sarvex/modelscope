@@ -60,11 +60,14 @@ class TextRankingMetric(Metric):
         mrr = 0
         for res in result.values():
             sorted_res = sorted(res, key=lambda x: x[0], reverse=True)
-            ar = 0
-            for index, ele in enumerate(sorted_res[:self.mrr_k]):
-                if str(ele[1]) == '1':
-                    ar = 1.0 / (index + 1)
-                    break
+            ar = next(
+                (
+                    1.0 / (index + 1)
+                    for index, ele in enumerate(sorted_res[: self.mrr_k])
+                    if str(ele[1]) == '1'
+                ),
+                0,
+            )
             mrr += ar
         return mrr / len(result)
 

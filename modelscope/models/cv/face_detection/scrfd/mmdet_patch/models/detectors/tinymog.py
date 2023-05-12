@@ -49,10 +49,9 @@ class TinyMog(SingleStageDetector):
         """
         super(SingleStageDetector, self).forward_train(img, img_metas)
         x = self.extract_feat(img)
-        losses = self.bbox_head.forward_train(x, img_metas, gt_bboxes,
-                                              gt_labels, gt_keypointss,
-                                              gt_bboxes_ignore)
-        return losses
+        return self.bbox_head.forward_train(
+            x, img_metas, gt_bboxes, gt_labels, gt_keypointss, gt_bboxes_ignore
+        )
 
     def simple_test(self,
                     img,
@@ -82,7 +81,7 @@ class TinyMog(SingleStageDetector):
         kps_out0 = []
         kps_out1 = []
         kps_out2 = []
-        for i in range(repeat_head):
+        for _ in range(repeat_head):
             outs = self.bbox_head(x)
             kps_out0 += [outs[2][0].detach().cpu().numpy()]
             kps_out1 += [outs[2][1].detach().cpu().numpy()]
@@ -102,12 +101,11 @@ class TinyMog(SingleStageDetector):
                     print(c.shape)
                 for c in bbox_pred:
                     print(c.shape)
-                if self.bbox_head.use_kps:
-                    for c in kps_pred:
-                        print(c.shape)
-                    return (cls_score, bbox_pred, kps_pred)
-                else:
+                if not self.bbox_head.use_kps:
                     return (cls_score, bbox_pred)
+                for c in kps_pred:
+                    print(c.shape)
+                return (cls_score, bbox_pred, kps_pred)
             bbox_list = self.bbox_head.get_bboxes(
                 *outs, img_metas, rescale=rescale)
 
@@ -137,12 +135,8 @@ class TinyMog(SingleStageDetector):
                     ]
         else:
             bbox_results = None
-        if var is not None:
-            return bbox_results, var
-        else:
-            return bbox_results
+        return (bbox_results, var) if var is not None else bbox_results
 
     def feature_test(self, img):
         x = self.extract_feat(img)
-        outs = self.bbox_head(x)
-        return outs
+        return self.bbox_head(x)

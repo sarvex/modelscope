@@ -59,11 +59,10 @@ def build_norm_layer(cfg, num_features, postfix=''):
 
     layer_type = cfg_.pop('type')
     if layer_type not in norm_cfg:
-        raise KeyError('Unrecognized norm type {}'.format(layer_type))
-    else:
-        abbr, norm_layer = norm_cfg[layer_type]
-        if norm_layer is None:
-            raise NotImplementedError
+        raise KeyError(f'Unrecognized norm type {layer_type}')
+    abbr, norm_layer = norm_cfg[layer_type]
+    if norm_layer is None:
+        raise NotImplementedError
 
     assert isinstance(postfix, (int, str))
     name = abbr + str(postfix)
@@ -137,7 +136,7 @@ class ConvModule(nn.Module):
 
         self.with_norm = norm_cfg is not None
         if bias == 'auto':
-            bias = False if self.with_norm else True
+            bias = not self.with_norm
         self.with_bias = bias
 
         if self.with_norm and self.with_bias:
@@ -178,10 +177,7 @@ class ConvModule(nn.Module):
 
     @property
     def norm(self):
-        if self.norm_name:
-            return getattr(self, self.norm_name)
-        else:
-            return None
+        return getattr(self, self.norm_name) if self.norm_name else None
 
     def forward(self, x, norm=True):
         for layer in self.order:
@@ -216,18 +212,11 @@ class DepthwiseConvModule(nn.Module):
         self.inplace = inplace
         self.order = order
         assert isinstance(self.order, tuple) and len(self.order) == 6
-        assert set(order) == {
-            'depthwise',
-            'dwnorm',
-            'act',
-            'pointwise',
-            'pwnorm',
-            'act',
-        }
+        assert set(order) == {'depthwise', 'dwnorm', 'pointwise', 'pwnorm', 'act'}
 
         self.with_norm = norm_cfg is not None
         if bias == 'auto':
-            bias = False if self.with_norm else True
+            bias = not self.with_norm
         self.with_bias = bias
 
         if self.with_norm and self.with_bias:
@@ -272,6 +261,6 @@ class DepthwiseConvModule(nn.Module):
             if layer_name != 'act':
                 layer = self.__getattr__(layer_name)
                 x = layer(x)
-            elif layer_name == 'act' and self.activation:
+            elif self.activation:
                 x = self.act(x)
         return x

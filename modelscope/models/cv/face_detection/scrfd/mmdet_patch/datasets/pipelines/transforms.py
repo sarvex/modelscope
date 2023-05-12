@@ -61,10 +61,7 @@ class ResizeV2(object):
         if img_scale is None:
             self.img_scale = None
         else:
-            if isinstance(img_scale, list):
-                self.img_scale = img_scale
-            else:
-                self.img_scale = [img_scale]
+            self.img_scale = img_scale if isinstance(img_scale, list) else [img_scale]
             assert mmcv.is_list_of(self.img_scale, tuple)
 
         if ratio_range is not None:
@@ -284,16 +281,7 @@ class ResizeV2(object):
                 'keep_ratio' keys are added into result dict.
         """
 
-        if 'scale' not in results:
-            if 'scale_factor' in results:
-                img_shape = results['img'].shape[:2]
-                scale_factor = results['scale_factor']
-                assert isinstance(scale_factor, float)
-                results['scale'] = tuple(
-                    [int(x * scale_factor) for x in img_shape][::-1])
-            else:
-                self._random_scale(results)
-        else:
+        if 'scale' in results:
             if not self.override:
                 assert 'scale_factor' not in results, (
                     'scale and scale_factor cannot be both set.')
@@ -303,6 +291,14 @@ class ResizeV2(object):
                     results.pop('scale_factor')
                 self._random_scale(results)
 
+        elif 'scale_factor' in results:
+            img_shape = results['img'].shape[:2]
+            scale_factor = results['scale_factor']
+            assert isinstance(scale_factor, float)
+            results['scale'] = tuple(
+                [int(x * scale_factor) for x in img_shape][::-1])
+        else:
+            self._random_scale(results)
         self._resize_img(results)
         self._resize_bboxes(results)
         self._resize_keypoints(results)
@@ -364,9 +360,7 @@ class RandomFlipV2(object):
             assert 0 <= sum(flip_ratio) <= 1
         elif isinstance(flip_ratio, float):
             assert 0 <= flip_ratio <= 1
-        elif flip_ratio is None:
-            pass
-        else:
+        elif flip_ratio is not None:
             raise ValueError('flip_ratios must be None, float, '
                              'or list of float')
         self.flip_ratio = flip_ratio
@@ -498,7 +492,7 @@ class RandomFlipV2(object):
         return results
 
     def __repr__(self):
-        return self.__class__.__name__ + f'(flip_ratio={self.flip_ratio})'
+        return f'{self.__class__.__name__}(flip_ratio={self.flip_ratio})'
 
 
 @PIPELINES.register_module()

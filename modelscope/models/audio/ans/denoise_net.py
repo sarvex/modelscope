@@ -37,9 +37,7 @@ class DfsmnAns(TorchModel):
         self.lorder = lorder
         self.linear1 = AffineTransform(120, 256)
         self.relu = RectifiedLinear(256, 256)
-        repeats = [
-            UniDeepFsmn(256, 256, lorder, 256) for i in range(fsmn_depth)
-        ]
+        repeats = [UniDeepFsmn(256, 256, lorder, 256) for _ in range(fsmn_depth)]
         self.deepfsmn = nn.Sequential(*repeats)
         self.linear2 = AffineTransform(256, 961)
         self.sig = Sigmoid(961, 961)
@@ -56,12 +54,10 @@ class DfsmnAns(TorchModel):
         x2 = self.relu(x1)
         x3 = self.deepfsmn(x2)
         x4 = self.linear2(x3)
-        x5 = self.sig(x4)
-        return x5
+        return self.sig(x4)
 
     def to_kaldi_nnet(self):
-        re_str = ''
-        re_str += '<Nnet>\n'
+        re_str = '' + '<Nnet>\n'
         re_str += self.linear1.to_kaldi_nnet()
         re_str += self.relu.to_kaldi_nnet()
         for dfsmn in self.deepfsmn:

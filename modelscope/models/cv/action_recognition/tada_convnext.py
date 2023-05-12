@@ -28,8 +28,7 @@ def drop_path(x, drop_prob: float = 0., training: bool = False):
     random_tensor = keep_prob + torch.rand(
         shape, dtype=x.dtype, device=x.device)
     random_tensor.floor_()  # binarize
-    output = x.div(keep_prob) * random_tensor
-    return output
+    return x.div(keep_prob) * random_tensor
 
 
 class DropPath(nn.Module):
@@ -251,8 +250,7 @@ class TAdaConvNeXtBlock(nn.Module):
                 kernels=cfg.VIDEO.BACKBONE.BRANCH.ROUTE_FUNC_K,
                 with_bias_cal=self.dwconv.bias is not None)
         else:
-            raise ValueError(
-                'Unknown route_func_type: {}'.format(route_func_type))
+            raise ValueError(f'Unknown route_func_type: {route_func_type}')
         self.norm = LayerNorm(dim, eps=1e-6)
         self.pwconv1 = nn.Linear(
             dim,

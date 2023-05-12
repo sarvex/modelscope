@@ -130,9 +130,7 @@ class CiderScorer(object):
         """
         for refs in self.crefs:
             # refs, k ref captions of one image
-            for ngram in set([
-                    ngram for ref in refs for (ngram, count) in ref.items()
-            ]):  # noqa
+            for ngram in {ngram for ref in refs for (ngram, count) in ref.items()}:  # noqa
                 self.document_frequency[ngram] += 1
 
     def compute_cider(self):

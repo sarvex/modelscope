@@ -106,10 +106,7 @@ def select_norm(norm, dim, shape):
         return GlobalLayerNorm(dim, shape, elementwise_affine=True)
     if norm == 'cln':
         return CumulativeLayerNorm(dim, elementwise_affine=True)
-    if norm == 'ln':
-        return nn.GroupNorm(1, dim, eps=1e-8)
-    else:
-        return nn.BatchNorm1d(dim)
+    return nn.GroupNorm(1, dim, eps=1e-8) if norm == 'ln' else nn.BatchNorm1d(dim)
 
 
 class Encoder(nn.Module):
@@ -197,8 +194,7 @@ class Decoder(nn.ConvTranspose1d):
         """
 
         if x.dim() not in [2, 3]:
-            raise RuntimeError('{} accept 3/4D tensor as input'.format(
-                self.__name__))
+            raise RuntimeError(f'{self.__name__} accept 3/4D tensor as input')
         x = super().forward(x if x.dim() == 3 else torch.unsqueeze(x, 1))
 
         if torch.squeeze(x).dim() == 1:
@@ -356,8 +352,7 @@ class ComputeAttention(nn.Module):
         if self.skip_connection:
             att_out = att_out + x
 
-        out = att_out
-        return out
+        return att_out
 
 
 class MossFormerMaskNet(nn.Module):

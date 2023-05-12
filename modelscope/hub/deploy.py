@@ -56,8 +56,8 @@ class EASGpuInstanceType(object):
 def min_smaller_than_max(instance, attribute, value):
     if value > instance.max_replica:
         raise ValueError(
-            "'min_replica' value: %s has to be smaller than 'max_replica' value: %s!"
-            % (value, instance.max_replica))
+            f"'min_replica' value: {value} has to be smaller than 'max_replica' value: {instance.max_replica}!"
+        )
 
 
 @define
@@ -163,8 +163,7 @@ class AttrsToQueryString(ABC):
         print(json_str)
         safe_str = urllib.parse.quote_plus(json_str)
         print(safe_str)
-        query_param = 'provider=%s' % safe_str
-        return query_param
+        return f'provider={safe_str}'
 
 
 @define
@@ -220,8 +219,8 @@ class ServiceDeployer(object):
         """
         if provider.vendor != Vendor.EAS:
             raise NotSupportError(
-                'Not support vendor: %s ,only support EAS current.' %
-                (provider.vendor))
+                f'Not support vendor: {provider.vendor} ,only support EAS current.'
+            )
         create_params = DeployServiceParameters(
             instance_name=instance_name,
             model_id=model_id,
@@ -235,8 +234,7 @@ class ServiceDeployer(object):
         handle_http_response(r, logger, self.cookies, 'create_service')
         if r.status_code >= HTTPStatus.OK and r.status_code < HTTPStatus.MULTIPLE_CHOICES:
             if is_ok(r.json()):
-                data = r.json()[API_RESPONSE_FIELD_DATA]
-                return data
+                return r.json()[API_RESPONSE_FIELD_DATA]
             else:
                 raise RequestError(r.json()[API_RESPONSE_FIELD_MESSAGE])
         else:
@@ -258,14 +256,12 @@ class ServiceDeployer(object):
             Dict: The information of the requested service instance.
         """
         params = GetServiceParameters(provider=provider)
-        path = '%s/api/v1/deployer/endpoint/%s?%s' % (
-            self.endpoint, instance_name, params.to_query_str())
+        path = f'{self.endpoint}/api/v1/deployer/endpoint/{instance_name}?{params.to_query_str()}'
         r = requests.get(path, cookies=self.cookies, headers=self.headers)
         handle_http_response(r, logger, self.cookies, 'get_service')
         if r.status_code == HTTPStatus.OK:
             if is_ok(r.json()):
-                data = r.json()[API_RESPONSE_FIELD_DATA]
-                return data
+                return r.json()[API_RESPONSE_FIELD_DATA]
             else:
                 raise RequestError(r.json()[API_RESPONSE_FIELD_MESSAGE])
         else:
@@ -288,14 +284,12 @@ class ServiceDeployer(object):
             Dict: The deleted instance information.
         """
         params = DeleteServiceParameters(provider=provider)
-        path = '%s/api/v1/deployer/endpoint/%s?%s' % (
-            self.endpoint, instance_name, params.to_query_str())
+        path = f'{self.endpoint}/api/v1/deployer/endpoint/{instance_name}?{params.to_query_str()}'
         r = requests.delete(path, cookies=self.cookies, headers=self.headers)
         handle_http_response(r, logger, self.cookies, 'delete_service')
         if r.status_code == HTTPStatus.OK:
             if is_ok(r.json()):
-                data = r.json()[API_RESPONSE_FIELD_DATA]
-                return data
+                return r.json()[API_RESPONSE_FIELD_DATA]
             else:
                 raise RequestError(r.json()[API_RESPONSE_FIELD_MESSAGE])
         else:
@@ -323,14 +317,12 @@ class ServiceDeployer(object):
 
         params = ListServiceParameters(
             provider=provider, skip=skip, limit=limit)
-        path = '%s/api/v1/deployer/endpoint?%s' % (self.endpoint,
-                                                   params.to_query_str())
+        path = f'{self.endpoint}/api/v1/deployer/endpoint?{params.to_query_str()}'
         r = requests.get(path, cookies=self.cookies, headers=self.headers)
         handle_http_response(r, logger, self.cookies, 'list_service_instances')
         if r.status_code == HTTPStatus.OK:
             if is_ok(r.json()):
-                data = r.json()[API_RESPONSE_FIELD_DATA]
-                return data
+                return r.json()[API_RESPONSE_FIELD_DATA]
             else:
                 raise RequestError(r.json()[API_RESPONSE_FIELD_MESSAGE])
         else:

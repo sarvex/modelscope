@@ -225,7 +225,7 @@ class EfficientNet(nn.Module):
             >>> print(endpoints['reduction_5'].shape)  # torch.Size([1, 320, 7, 7])
             >>> print(endpoints['reduction_6'].shape)  # torch.Size([1, 1280, 7, 7])
         """
-        endpoints = dict()
+        endpoints = {}
 
         x = self._swish(self._bn0(self._conv_stem(inputs)))
         prev_x = x
@@ -237,13 +237,13 @@ class EfficientNet(nn.Module):
                     self._blocks)  # scale drop connect_rate
             x = block(x, drop_connect_rate=drop_connect_rate)
             if prev_x.size(2) > x.size(2):
-                endpoints['reduction_{}'.format(len(endpoints) + 1)] = prev_x
+                endpoints[f'reduction_{len(endpoints) + 1}'] = prev_x
             elif idx == len(self._blocks) - 1:
-                endpoints['reduction_{}'.format(len(endpoints) + 1)] = x
+                endpoints[f'reduction_{len(endpoints) + 1}'] = x
             prev_x = x
 
         x = self._swish(self._bn1(self._conv_head(x)))
-        endpoints['reduction_{}'.format(len(endpoints) + 1)] = x
+        endpoints[f'reduction_{len(endpoints) + 1}'] = x
 
         return endpoints
 

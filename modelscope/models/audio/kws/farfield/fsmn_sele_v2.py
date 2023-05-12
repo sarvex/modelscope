@@ -129,9 +129,7 @@ class FSMNSeleNetV2(nn.Module):
 
         # remove channel dimension
         y = torch.squeeze(y, -2)
-        z = self.decision(y)
-
-        return z
+        return self.decision(y)
 
     def print_model(self):
         self.featmap.print_model()

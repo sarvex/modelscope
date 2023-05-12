@@ -30,11 +30,12 @@ class VideoSuperResolutionMetric(Metric):
         niqe_list = []
         for pred in self.preds:
             if isinstance(pred, list):
-                for item in pred:
-                    niqe_list.append(
-                        calculate_niqe(
-                            item[0].permute(1, 2, 0).numpy() * 255,
-                            crop_border=0))
+                niqe_list.extend(
+                    calculate_niqe(
+                        item[0].permute(1, 2, 0).numpy() * 255, crop_border=0
+                    )
+                    for item in pred
+                )
             else:
                 niqe_list.append(
                     calculate_niqe(

@@ -250,10 +250,9 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
-
-        return outputs
+        return dict(
+            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas'])
+        )
 
     def val_step(self, data, optimizer):
         """The iteration step during validation.
@@ -265,7 +264,6 @@ class BaseDetector(nn.Module, metaclass=ABCMeta):
         losses = self(**data)
         loss, log_vars = self._parse_losses(losses)
 
-        outputs = dict(
-            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas']))
-
-        return outputs
+        return dict(
+            loss=loss, log_vars=log_vars, num_samples=len(data['img_metas'])
+        )

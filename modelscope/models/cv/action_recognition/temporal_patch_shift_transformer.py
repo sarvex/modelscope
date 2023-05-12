@@ -36,9 +36,11 @@ def window_partition(x, window_size):
     B, D, H, W, C = x.shape
     x = x.view(B, D // window_size[0], window_size[0], H // window_size[1],
                window_size[1], W // window_size[2], window_size[2], C)
-    windows = x.permute(0, 1, 3, 5, 2, 4, 6,
-                        7).contiguous().view(-1, reduce(mul, window_size), C)
-    return windows
+    return (
+        x.permute(0, 1, 3, 5, 2, 4, 6, 7)
+        .contiguous()
+        .view(-1, reduce(mul, window_size), C)
+    )
 
 
 def window_reverse(windows, window_size, B, D, H, W):
@@ -211,11 +213,12 @@ class WindowAttention3D(nn.Module):
         trunc_normal_(self.relative_position_bias_table, std=.02)
         self.softmax = nn.Softmax(dim=-1)
 
-        if self.shift and self.shift_type == 'psm':
-            self.shift_op = PatchShift(False, 1)
-            self.shift_op_back = PatchShift(True, 1)
-        elif self.shift and self.shift_type == 'tsm':
-            self.shift_op = TemporalShift(8)
+        if self.shift:
+            if self.shift_type == 'psm':
+                self.shift_op = PatchShift(False, 1)
+                self.shift_op_back = PatchShift(True, 1)
+            elif self.shift_type == 'tsm':
+                self.shift_op = TemporalShift(8)
 
     def forward(self, x, mask=None, batch_size=8, frame_len=8):
         """ Forward function.
@@ -261,10 +264,7 @@ class WindowAttention3D(nn.Module):
             attn = attn.view(B_ // nW, nW, self.num_heads, N,
                              N) + mask.unsqueeze(1).unsqueeze(0)
             attn = attn.view(-1, self.num_heads, N, N)
-            attn = self.softmax(attn)
-        else:
-            attn = self.softmax(attn)
-
+        attn = self.softmax(attn)
         attn = self.attn_drop(attn)
         # Shift back for psm
         if self.shift and self.shift_type == 'psm':
@@ -315,11 +315,8 @@ class PatchShift(nn.Module):
         feat = x
         feat = feat.view(batch_size, frame_len, -1, num_heads, 7, 7, c)
         out = feat.clone()
-        multiplier = 1
         stride = 1
-        if inv:
-            multiplier = -1
-
+        multiplier = -1 if inv else 1
         # Pattern C
         out[:, :, :, :fold, 0::3, 0::3, :] = torch.roll(
             feat[:, :, :, :fold, 0::3, 0::3, :],
@@ -603,9 +600,9 @@ def compute_mask(D, H, W, window_size, shift_size, device):
                                     window_size)  # nW, ws[0]*ws[1]*ws[2], 1
     mask_windows = mask_windows.squeeze(-1)  # nW, ws[0]*ws[1]*ws[2]
     attn_mask = mask_windows.unsqueeze(1) - mask_windows.unsqueeze(2)
-    attn_mask = attn_mask.masked_fill(attn_mask != 0,
-                                      float(-100.0)).masked_fill(
-                                          attn_mask == 0, float(0.0))
+    attn_mask = attn_mask.masked_fill(attn_mask != 0, -100.0).masked_fill(
+        attn_mask == 0, 0.0
+    )
     return attn_mask
 
 
@@ -723,10 +720,7 @@ class PatchEmbed3D(nn.Module):
 
         self.proj = nn.Conv3d(
             in_chans, embed_dim, kernel_size=patch_size, stride=patch_size)
-        if norm_layer is not None:
-            self.norm = norm_layer(embed_dim)
-        else:
-            self.norm = None
+        self.norm = norm_layer(embed_dim) if norm_layer is not None else None
 
     def forward(self, x):
         """Forward function."""
@@ -896,28 +890,27 @@ class SwinTransformer2D_TPS(nn.Module):
         relative_position_bias_table_keys = [
             k for k in state_dict.keys() if 'relative_position_bias_table' in k
         ]
+        # wd = self.window_size[0]
+        # to make it match
+        wd = 16
         for k in relative_position_bias_table_keys:
             relative_position_bias_table_pretrained = state_dict[k]
             relative_position_bias_table_current = self.state_dict()[k]
             L1, nH1 = relative_position_bias_table_pretrained.size()
             L2, nH2 = relative_position_bias_table_current.size()
             L2 = (2 * self.window_size[1] - 1) * (2 * self.window_size[2] - 1)
-            # wd = self.window_size[0]
-            # to make it match
-            wd = 16
             if nH1 != nH2:
                 print(f'Error in loading {k}, passing')
-            else:
-                if L1 != L2:
-                    S1 = int(L1**0.5)
-                    relative_position_bias_table_pretrained_resized = torch.nn.functional.interpolate(
-                        relative_position_bias_table_pretrained.permute(
-                            1, 0).view(1, nH1, S1, S1),
-                        size=(2 * self.window_size[1] - 1,
-                              2 * self.window_size[2] - 1),
-                        mode='bicubic')
-                    relative_position_bias_table_pretrained = relative_position_bias_table_pretrained_resized.view(
-                        nH2, L2).permute(1, 0)
+            elif L1 != L2:
+                S1 = int(L1**0.5)
+                relative_position_bias_table_pretrained_resized = torch.nn.functional.interpolate(
+                    relative_position_bias_table_pretrained.permute(
+                        1, 0).view(1, nH1, S1, S1),
+                    size=(2 * self.window_size[1] - 1,
+                          2 * self.window_size[2] - 1),
+                    mode='bicubic')
+                relative_position_bias_table_pretrained = relative_position_bias_table_pretrained_resized.view(
+                    nH2, L2).permute(1, 0)
             state_dict[k] = relative_position_bias_table_pretrained.repeat(
                 2 * wd - 1, 1)
 
@@ -1057,11 +1050,11 @@ class BaseHead(nn.Module, metaclass=ABCMeta):
             dict: A dict containing field 'loss_cls'(mandatory)
             and 'top1_acc', 'top5_acc'(optional).
         """
-        losses = dict()
+        losses = {}
         if labels.shape == torch.Size([]):
             labels = labels.unsqueeze(0)
         elif labels.dim() == 1 and labels.size()[0] == self.num_classes \
-                and cls_score.size()[0] == 1:
+                    and cls_score.size()[0] == 1:
             # Fix a bug when training with soft labels and batch size is 1.
             # When using soft labels, `labels` and `cls_score` share the same
             # shape.
@@ -1082,7 +1075,7 @@ class BaseHead(nn.Module, metaclass=ABCMeta):
         loss_cls = self.loss_cls(cls_score, labels, **kwargs)
         # loss_cls may be dictionary or single tensor
         if isinstance(loss_cls, dict):
-            losses.update(loss_cls)
+            losses |= loss_cls
         else:
             losses['loss_cls'] = loss_cls
 
@@ -1150,10 +1143,7 @@ class I3DHead(BaseHead):
             x = self.dropout(x)
         # [N, in_channels, 1, 1, 1]
         x = x.view(x.shape[0], -1)
-        # [N, in_channels]
-        cls_score = self.fc_cls(x)
-        # [N, num_classes]
-        return cls_score
+        return self.fc_cls(x)
 
 
 class PatchShiftTransformer(TorchModel):
@@ -1194,5 +1184,4 @@ class PatchShiftTransformer(TorchModel):
 
     def forward(self, x):
         feature = self.backbone(x)
-        output = self.cls_head(feature)
-        return output
+        return self.cls_head(feature)

@@ -11,10 +11,7 @@ import tensorflow as tf
 def resize_size(image, size=720):
     h, w, c = np.shape(image)
     if min(h, w) > size:
-        if h > w:
-            h, w = int(size * h / w), size
-        else:
-            h, w = size, int(size * w / h)
+        h, w = (int(size * h / w), size) if h > w else (size, int(size * w / h))
     image = cv2.resize(image, (w, h), interpolation=cv2.INTER_AREA)
     return image
 
@@ -40,10 +37,13 @@ def get_f5p(landmarks, np_img):
     nose = landmarks[30]
     mouth_left = landmarks[48]
     mouth_right = landmarks[54]
-    f5p = [[eye_left[0], eye_left[1]], [eye_right[0], eye_right[1]],
-           [nose[0], nose[1]], [mouth_left[0], mouth_left[1]],
-           [mouth_right[0], mouth_right[1]]]
-    return f5p
+    return [
+        [eye_left[0], eye_left[1]],
+        [eye_right[0], eye_right[1]],
+        [nose[0], nose[1]],
+        [mouth_left[0], mouth_left[1]],
+        [mouth_right[0], mouth_right[1]],
+    ]
 
 
 def find_pupil(landmarks, np_img):
@@ -109,15 +109,11 @@ def read_image(image_path, IMAGE_SIZE=256):
     image.set_shape([None, None, 3])
     image = tf.image.resize(images=image, size=[IMAGE_SIZE, IMAGE_SIZE])
     image = image[..., ::-1]
-    # image = image / 127.5 - 1
-    image = (image - 0.5) * 2
-
-    return image
+    return (image - 0.5) * 2
 
 
 def load_data(photo_list):
-    photo = read_image(photo_list)
-    return photo
+    return read_image(photo_list)
 
 
 def tf_data_loader(image_list, batch_size):
@@ -166,6 +162,6 @@ def all_file(file_dir):
     for root, dirs, files in os.walk(file_dir):
         for file in files:
             extend = os.path.splitext(file)[1]
-            if extend == '.png' or extend == '.jpg' or extend == '.jpeg' or extend == '.JPG':
+            if extend in ['.png', '.jpg', '.jpeg', '.JPG']:
                 L.append(os.path.join(root, file))
     return L

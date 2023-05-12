@@ -18,7 +18,7 @@ from torch.nn import functional as F
 from modelscope.models.base import TorchModel
 from .resnet import Bottleneck3D, ResNet3D
 
-logger = logging.getLogger('detectron2.modelscope.' + __name__)
+logger = logging.getLogger(f'detectron2.modelscope.{__name__}')
 
 
 class ActionDetector(FCOS, TorchModel):
@@ -223,10 +223,10 @@ def build_action_detection_model(num_classes, device='cpu'):
         input_shape=[ShapeSpec(channels=out_channels)] * 5,
         conv_dims=[out_channels] * 2,
         num_classes=num_classes)
-    model = ActionDetector(
+    return ActionDetector(
         backbone=fpnbackbone,
         head=head,
         num_classes=num_classes,
         pixel_mean=[0, 0, 0],
-        pixel_std=[0, 0, 0])
-    return model
+        pixel_std=[0, 0, 0],
+    )

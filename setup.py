@@ -46,8 +46,7 @@ def get_git_hash():
 
 def get_hash():
     assert os.path.exists('.git'), '.git directory does not exist'
-    sha = get_git_hash()[:7]
-    return sha
+    return get_git_hash()[:7]
 
 
 def get_version():
@@ -85,8 +84,7 @@ def parse_requirements(fname='requirements.txt', with_version=True):
             target = line.split(' ')[1]
             relative_base = os.path.dirname(fname)
             absolute_target = os.path.join(relative_base, target)
-            for info in parse_require_file(absolute_target):
-                yield info
+            yield from parse_require_file(absolute_target)
         else:
             info = {'line': line}
             if line.startswith('-e '):
@@ -113,22 +111,20 @@ def parse_requirements(fname='requirements.txt', with_version=True):
 
     def parse_require_file(fpath):
         with open(fpath, 'r', encoding='utf-8') as f:
-            for line in f.readlines():
+            for line in f:
                 line = line.strip()
                 if line.startswith('http'):
-                    print('skip http requirements %s' % line)
+                    print(f'skip http requirements {line}')
                     continue
-                if line and not line.startswith('#') and not line.startswith(
-                        '--'):
-                    for info in parse_line(line):
-                        yield info
-                elif line and line.startswith('--find-links'):
-                    eles = line.split()
-                    for e in eles:
-                        e = e.strip()
-                        if 'http' in e:
-                            info = dict(dependency_links=e)
-                            yield info
+                if line:
+                    if not line.startswith('#') and not line.startswith('--'):
+                        yield from parse_line(line)
+                    elif line.startswith('--find-links'):
+                        eles = line.split()
+                        for e in eles:
+                            e = e.strip()
+                            if 'http' in e:
+                                yield dict(dependency_links=e)
 
     def gen_packages_items():
         items = []
@@ -143,7 +139,7 @@ def parse_requirements(fname='requirements.txt', with_version=True):
                         # apparently package_deps are broken in 3.4
                         platform_deps = info.get('platform_deps')
                         if platform_deps is not None:
-                            parts.append(';' + platform_deps)
+                            parts.append(f';{platform_deps}')
                     item = ''.join(parts)
                     items.append(item)
                 else:
@@ -160,9 +156,9 @@ def pack_resource():
         shutil.rmtree(root_dir)
     os.makedirs(root_dir)
 
-    proj_dir = root_dir + 'modelscope/'
+    proj_dir = f'{root_dir}modelscope/'
     shutil.copytree('./modelscope', proj_dir)
-    shutil.copytree('./configs', proj_dir + 'configs')
+    shutil.copytree('./configs', f'{proj_dir}configs')
     shutil.copytree('./requirements', 'package/requirements')
     shutil.copy('./requirements.txt', 'package/requirements.txt')
     shutil.copy('./MANIFEST.in', 'package/MANIFEST.in')
